@@ -1,0 +1,3 @@
+﻿<#var manager = TemplateFileManager.Create(this);#>
+<#manager.StartNewFile(“Template1.cs”);#>
+<#manager.Process();#>
