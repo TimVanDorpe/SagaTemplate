@@ -1,0 +1,391 @@
+﻿<#@ template debug="false" hostspecific="true" language="C#" #>
+
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System" #>
+<#@ import namespace="System.IO" #>
+<#@ output extension=".cs" #>
+<#@ template hostSpecific="true"#>
+<# var datatype = new string [] {"Text", "LanguageVO", "PosPolarityENUM"}; #>
+<# var properties = new string [] {"Text", "Language", "DefaultPosPolarity"}; #>
+<# var project = "Isaac"; #>
+<# var repository = "PosWordStringRepository"; #>
+<# var aggregate = "PosWordString" ; #>
+<# var classname = "PosWordString"; #>
+<# var appCommands = true; #>
+<# var numberOfSteps = 0; #>
+<# var version = false; #>
+using HC.Common;
+using HC.Common.Infrastructure.DomainPersistence;
+using HC.Isaac.Application.Models.InputModel.DeleteA<#= aggregate #>;
+using HC.Isaac.Infrastructure.DomainPersistence.Repository.<#= aggregate #>;
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Threading.Tasks;
+using Xunit;
+using Xunit.Abstractions;
+
+namespace HC.Isaac.Application.UnitTests.<#= aggregate #>
+{
+    public class <#= aggregate #>DeleteTests
+    {
+        static <#= aggregate #>DeleteTests()
+        {
+            if (Startup.IocConfig == null)
+                Startup.IocConfig = Startup.Init();
+        }
+
+        private readonly ITestOutputHelper output;
+        private readonly Guid tenantUniqueId = Guid.Parse("17DBC831-4CF2-4BD1-B0B3-09E17D605291");
+
+        public <#= aggregate #>DeleteTests(ITestOutputHelper output)
+        {
+            this.output = output;
+        }
+
+        [Fact]
+        public async Task DeleteA<#= aggregate #>_ShouldReturnIsValidResult()
+        {
+            // Arrange
+            var <#= aggregate.ToLower() #>AS = ObjectContainer.Resolve<<#= aggregate #>AS>();
+            var <#= aggregate.ToLower() #>Rep = ObjectContainer.Resolve<<#= aggregate #>Repository>();
+            var uniqueId = Guid.Parse("3e798f8f-13c4-4b9c-aa25-d1fb80d47605");
+            var model = new DeleteA<#= aggregate #>IM()
+            {
+                CorrelationUniqueId = Guid.NewGuid(),
+                TenantUniqueId = tenantUniqueId,
+                UniqueId = uniqueId,
+                Version = 1
+            };
+
+            // Act
+            var result = await <#= aggregate.ToLower() #>AS.DeleteAsync(Guid.NewGuid(), model);
+
+            // Try to find the deleted <#= aggregate.ToLower() #> in the DB
+            var old<#= aggregate #> = await <#= aggregate.ToLower() #>Rep.FindAsync(Loading.Full, tenantUniqueId.ToTenantUniqueId(), uniqueId.ToUniqueId());
+
+            // Assert
+            Assert.True(result.IsValid);
+            Assert.Null(old<#= aggregate #>);
+        }      
+    }
+}
+<#
+  // End of file.
+  SaveOutput("DeleteA" + classname + "AppTests.cs");
+  
+  #>
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Threading.Tasks;
+using HC.Common;
+using HC.Common.Infrastructure.DomainPersistence;
+using HC.Isaac.Application.Models.InputModel.<#= aggregate #>;
+using HC.Isaac.Infrastructure.DomainPersistence.Repository.<#= aggregate #>;
+using Xunit;
+using Xunit.Abstractions;
+
+namespace HC.Isaac.Application.UnitTests.<#= aggregate #>
+{
+    public class <#= aggregate #>CreateTest
+    {
+        static <#= aggregate #>CreateTest()
+        {
+            if (Startup.IocConfig == null)
+                Startup.IocConfig = Startup.Init();
+        }
+
+        private readonly ITestOutputHelper output;
+        private readonly Guid tenantUniqueId = Guid.Parse("63f8042d-c96f-4b90-8076-c4e9a8db8303");
+
+        public <#= aggregate #>CreateTest(ITestOutputHelper output)
+        {
+            this.output = output;
+        }
+        [Fact]
+        public async Task Create<#= aggregate #>_ShouldReturnIsValidResult()
+        {
+            // Arrange
+            var <#= aggregate.ToLower() #>AS = ObjectContainer.Resolve<<#= aggregate #>AS>();
+            var <#= aggregate.ToLower() #>Rep = ObjectContainer.Resolve<<#= aggregate #>Repository>();           
+            var model = new CreateA<#= aggregate #>IM()
+            {
+                CorrelationUniqueId = Guid.NewGuid(),
+                TenantUniqueId = tenantUniqueId,
+<# for (int i = 0; i < properties.Length; i++)  { #>
+			 <#= properties[i] #> = ,
+<# } #>
+            };
+            // Act
+            var result = await <#= aggregate.ToLower() #>AS.CreateAsync(Guid.NewGuid(), model);
+
+            // Assert
+            Assert.True(result.IsValid);
+        }      
+    }
+}
+<#
+  // End of file.
+  SaveOutput("CreateA" + classname + "AppTests.cs");
+  
+  #>
+
+using System;
+using System.Linq;
+using System.Threading.Tasks;
+using Xunit;
+using Xunit.Abstractions;
+
+namespace HC.Isaac.Application.UnitTests.<#= aggregate #>
+{
+    public class <#= aggregate #>FindAllQRYTests
+    {
+        static <#= aggregate #>FindAllQRYTests()
+        {
+            if (Startup.IocConfig == null)
+                Startup.IocConfig = Startup.Init();
+        }
+
+        private readonly ITestOutputHelper output;
+
+        public <#= aggregate #>FindAllQRYTests(ITestOutputHelper output)
+        {
+            this.output = output;
+        }
+
+        [Fact]
+        public async Task <#= aggregate #>FindAll_ShouldReturnResult()
+        {
+            // Arrange
+            var <#= aggregate.ToLower() #>AS = ObjectContainer.Resolve<<#= aggregate #>AS>();
+            var tenantUniqueId = Test.Setup.Helpers.Tenant.SuperTenantID;
+            
+            // Act
+            var result = await <#= aggregate.ToLower() #>AS.GetAllAsync(tenantUniqueId, Guid.NewGuid(), Guid.NewGuid());
+
+            // Assert
+            Assert.True(result.IsValid && result.Object != null && result.Object.ToList().Any());
+        }
+    }
+}
+<#
+  // End of file.
+  SaveOutput(classname + "GetAllQRYTest.cs");
+  
+  #>
+
+using System;
+using System.Data.Common;
+using System.Linq;
+using System.Threading.Tasks;
+using HC.Isaac.Application.Models.InputModel.<#= aggregate #>;
+using HC.Isaac.Infrastructure.DomainPersistence.Repository.<#= aggregate #>;
+using Xunit;
+using Xunit.Abstractions;
+namespace HC.Isaac.Application.IntegrationTests.<#= aggregate #>
+{
+    public class CreateA<#= aggregate #>_IntTest
+    {
+        static CreateA<#= aggregate #>_IntTest()
+        {
+            if (Startup.IocConfig == null)
+                Startup.IocConfig = Startup.Init();
+        }
+
+        private readonly ITestOutputHelper output;
+
+        public CreateA<#= aggregate #>_IntTest(ITestOutputHelper output)
+        {
+            this.output = output;
+        }
+        
+
+        [Fact(Skip = "only manual")]
+        //[Fact]
+        public async Task CreateA<#= aggregate #>_ShouldCreateA<#= aggregate #>()
+        {
+            // Arrange
+            var <#= aggregate.ToLower() #>As = ObjectContainer.Resolve<<#= aggregate #>AS>();
+            
+
+            var userId = Guid.Parse("88B79954-98E6-48F6-B350-ACE49D98130C");
+            var tenantId = Guid.Parse("17DBC831-4CF2-4BD1-B0B3-09E17D605291");
+            var model = new CreateA<#= aggregate #>IM()
+            {
+<# for (int i = 0; i < properties.Length; i++)  { #>
+			 <#= properties[i] #> = ,
+<# } #>
+                CorrelationUniqueId = Guid.NewGuid(),           
+                TenantUniqueId = tenantId
+            };
+            var <#= aggregate.ToLower() #> = await <#= aggregate.ToLower() #>As.CreateAsync(userId, model);
+
+            // Assert
+            Assert.True(<#= aggregate.ToLower() #>.IsValid);
+        }
+      
+    }
+}
+<#
+  // End of file.
+  SaveOutput(classname + "IntTests.cs");
+  
+  #>
+
+public static IEnumerable<<#= aggregate #>PE> Get<#= aggregate #>s()
+        {
+            return new <#= aggregate #>PE[]
+            {
+                new <#= aggregate #>PE()
+                {
+                    DateCreated = DateTime.Now,
+                    DateLastUpdated = DateTime.Now,
+                    HasbeenEnabled = true,
+                    TenantUniqueId = Guid.Parse("17DBC831-4CF2-4BD1-B0B3-09E17D605291"),
+                    State = PersistenceState.Added,
+                    UniqueId= Guid.NewGuid(),
+                    RowKey = BitConverter.GetBytes((long)1)
+<# for (int i = 0; i < properties.Length; i++)  { #>
+				,<#= properties[i] #> =
+<# } #>
+                },
+                new <#= aggregate #>PE()
+                {
+                    DateCreated = DateTime.Now,
+                    DateLastUpdated = DateTime.Now,
+                    HasbeenEnabled = true,
+                    TenantUniqueId = Guid.NewGuid(),
+                    State = PersistenceState.Added,
+                    UniqueId= Guid.NewGuid(),
+                    RowKey = BitConverter.GetBytes((long)1),
+<# for (int i = 0; i < properties.Length; i++)  { #>
+				   ,<#= properties[i] #> =
+<# } #>
+                },
+                new <#= aggregate #>PE()
+                {
+                    DateCreated = DateTime.Now,
+                    DateLastUpdated = DateTime.Now,
+                    HasbeenEnabled = true,
+                    TenantUniqueId = Guid.Parse("17DBC831-4CF2-4BD1-B0B3-09E17D605291"),
+                    State = PersistenceState.Added,
+                    UniqueId= Guid.NewGuid(),
+                    RowKey = BitConverter.GetBytes((long)1)
+<# for (int i = 0; i < properties.Length; i++)  { #>
+				    ,<#= properties[i] #> = 
+<# } #>
+                }
+            };
+        }
+
+  public static async Task<<#= aggregate #>Repository> Get<#= aggregate #>Repository()
+        {
+            var factory = new AsyncInMemoryContextFactory<<#= aggregate #>DbContext>(new DbContextOptionsBuilder<<#= aggregate #>DbContext>());
+            var context = await factory.CreateContextAsync();
+            var repository = new <#= aggregate #>Repository(factory);
+            context.AddRange(Database.Get<#= aggregate #>s());
+            context.SaveChanges();
+            return repository;
+        }
+
+		// ADAPT IOC INFRASTRUCTURE
+		// ADAPT IOC TEST.SETUP
+<#
+  // End of file.
+  SaveOutput(classname + "database.cs");
+  
+  #>
+
+
+
+using System;
+using HC.Common;
+using HC.Integration.Domain.ValueObjects;
+using HC.Isaac.Domain.Aggregate.<#= aggregate #>;
+using Xunit;
+
+
+namespace HC.Isaac.Domain.UnitTests.<#= aggregate #>
+{
+    public class <#= aggregate #>CreateTests
+    {
+        static <#= aggregate #>CreateTests()
+        {
+            if (Startup.IocConfig == null)
+                Startup.IocConfig = Startup.Init();
+        }
+        
+        [Fact]
+        public void CreateNew<#= aggregate #>_WithValidProperties_ShouldCreateAValidAggregate()
+        {
+            var <#= aggregate.ToLower() #> = <#= aggregate #>AR.Create(
+                tenantUniqueId:Guid.NewGuid().ToTenantUniqueId()
+                ,uniqueId: new UniqueId(Guid.NewGuid())
+<# for (int i = 0; i < properties.Length; i++)  { #>
+				,<#= properties[i].ToLower() #> :
+<# } #>
+				);
+
+            Assert.NotNull(<#= aggregate.ToLower() #>);
+        }       
+    }
+}
+<#
+  // End of file.
+  SaveOutput(classname + "CreateTests.cs");
+  
+  #>
+  using System;
+using System.Threading.Tasks;
+using HC.Common;
+using HC.Common.Infrastructure.DomainPersistence;
+using HC.Integration.Domain.ValueObjects;
+using HC.Isaac.Domain.Aggregate.<#= aggregate #>;
+using HC.Isaac.Infrastructure.DomainPersistence.UnitTests;
+using HC.Isaac.Test.Setup;
+using Xunit;
+namespace HC.Isaac.Infrastructure.UnitTests.DomainPersistence.<#= aggregate.ToLower() #>
+{
+    public class <#= aggregate #>CreateTests
+    {
+        static <#= aggregate #>CreateTests()
+        {
+            if (Startup.IocConfig == null)
+                Startup.IocConfig = Startup.Init();
+        }
+
+        [Fact]
+        public async Task CreateNew<#= aggregate #>_WithValidProperties_ShouldCreateAValidAggregate()
+        {
+            // Arrange
+            var repository = await Database.Get<#= aggregate #>Repository();
+			var tenantUniqueId = Guid.NewGuid().ToTenantUniqueId();
+<# for (int i = 0; i < properties.Length; i++)  { #>
+		    var <#= properties[i].ToLower() #> = ;
+<# } #>
+            // Act
+            var aggregate = <#= aggregate #>AR.Create(tenantUniqueId, UniqueId.Create(Guid.NewGuid())<# for (int i = 0; i < properties.Length; i++)  { #> , <#= properties[i].ToLower() #> <# } #>);
+            aggregate = await repository.SaveAsync(UniqueId.Create(Guid.NewGuid()), UniqueId.Create(Guid.NewGuid()), aggregate);
+            
+            // Assert
+            Assert.NotNull(aggregate.UniqueId);
+        }
+    }
+}
+<#
+  // End of file.
+  SaveOutput(classname + "CreateTestsInfra.cs");
+  
+  #>
+
+
+
+<#+
+private void SaveOutput(string outputFileName) {
+  string templateDirectory = Path.GetDirectoryName(Host.TemplateFile);
+  string outputFilePath = Path.Combine(templateDirectory, outputFileName);
+  File.WriteAllText(outputFilePath, this.GenerationEnvironment.ToString()); 
+  this.GenerationEnvironment.Remove(0, this.GenerationEnvironment.Length);
+}
+#>
