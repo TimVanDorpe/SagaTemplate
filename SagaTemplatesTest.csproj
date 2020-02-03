@@ -40,6 +40,16 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Template.tt</DependentUpon>
     </Compile>
+    <Compile Update="TemplateUpdate.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>TemplateUpdate.tt</DependentUpon>
+    </Compile>
+    <Compile Update="TemplateVO.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>TemplateVO.tt</DependentUpon>
+    </Compile>
     <Compile Update="UnitTemplate.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
@@ -53,10 +63,23 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>Template.cs</LastGenOutput>
     </None>
+    <None Update="TemplateUpdate.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>TemplateUpdate.cs</LastGenOutput>
+    </None>
+    <None Update="TemplateVO.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>TemplateVO.cs</LastGenOutput>
+    </None>
     <None Update="UnitTemplate.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>UnitTemplate.cs</LastGenOutput>
     </None>
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <Folder Include="Templates\" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,209 @@
+﻿<#@ template debug="false" hostspecific="true" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System" #>
+<#@ import namespace="System.IO" #>
+<#@ output extension=".cs" #>
+<#@ template hostSpecific="true"#>
+<# var datatype = new string [] {"DistanceVO", "PosTypeENUM?","Text?", "bool"}; #>
+<# var properties = new string [] {"Distance","PosType","SpecificWord", "Noiseless"}; #>
+<# var project = "Isaac"; #>
+<# var aggregate = "PosWordString" ; #>
+<# var vo = "MuposCondition" ; #>
+<# var listName = "MuposConditions"; #>
+using System;
+using HC.Common;
+using Newtonsoft.Json;
+
+namespace HC.Isaac.Domain.Aggregate.<#= aggregate #>
+{
+    [Serializable]
+    public class Deleted<#= vo #>DE : DomainEvent
+    {
+        [JsonConstructor]
+        public Deleted<#= vo #>DE(TenantUniqueId tenantUniqueId, UniqueId uniqueId, UniqueId <#= ToCamelCase(vo) #>UniqueId) 
+            : base(tenantUniqueId, uniqueId)
+        {
+            this.<#= vo #>UniqueId = <#= ToCamelCase(vo) #>UniqueId;
+        }
+        public UniqueId <#= vo #>UniqueId { get; set; }
+    }
+}
+<#
+  // End of file.
+  SaveOutput("Deleted" + listName + "DE.cs"); 
+#>
+using System;
+using HC.Common;
+using Newtonsoft.Json;
+
+namespace HC.Isaac.Domain.Aggregate.<#= aggregate #>
+{
+
+    [Serializable]
+    public class Added<#= vo #>DE : DomainEvent
+    {
+        [JsonConstructor]
+		public Added<#= vo #>DE(TenantUniqueId tenantUniqueId, UniqueId uniqueId, UniqueId <#= ToCamelCase(vo) #>UniqueId<# for (int i = 0; i < properties.Length; i++)  { #>,<#= datatype[i] #> <#= ToCamelCase(properties[i]) #><#}#>
+           ) 
+            : base(tenantUniqueId, uniqueId)
+        {
+            <#= ToCamelCase(vo) #>UniqueId.Requires().IsNotNull();
+
+            <#= vo #>UniqueId = <#= ToCamelCase(vo) #>UniqueId;    
+<# for (int i = 0; i < properties.Length; i++)  { #>
+		    this.<#= properties[i] #> = <#= ToCamelCase(properties[i]) #> ;
+<# } #>
+        }
+
+        public UniqueId <#= vo #>UniqueId { get; set; }      
+<# for (int i = 0; i < properties.Length; i++)  { #>
+		public <#= datatype[i] + " " + properties[i] #> {get;set;}
+<# } #> 
+    }
+}
+
+
+<#
+  // End of file.
+  SaveOutput("Added" + listName + "DE.cs"); 
+#>
+
+// PROPERTIES
+        private readonly List<<#= vo#>VO> _<#= ToCamelCase(listName) #> = new List<<#= vo#>VO>();
+        private readonly List<<#= vo#>VO> _persistence<#= listName #> = new List<<#= vo#>VO>();
+        public ReadOnlyCollection<<#= vo #>VO> <#= listName #> => _<#= ToCamelCase(listName) #>.AsReadOnly();
+        public ReadOnlyCollection<<#= vo #>VO> Persistence<#= listName #> => _persistence<#= listName #>.AsReadOnly();
+
+// Public methods
+		  public void Add<#= listName #>(<#= vo #>VO <#= ToCamelCase(listName) #>)
+        {
+            // Conditions
+            CanAdd<#= listName #>(<#= ToCamelCase(listName) #>).Requires(nameof(CanAdd<#= listName #>)).IsTrue();
+
+            // Apply Event
+            Domain_ApplyEvent(new Added<#= vo #>DE(TenantUniqueId, UniqueId, <#= ToCamelCase(listName) #>.UniqueId));
+        }
+        public void RemoveA<#= listName #>(UniqueId <#= ToCamelCase(listName) #>UniqueId)
+        {
+            // Conditions
+            CanDelete<#= listName #>(<#= ToCamelCase(listName) #>UniqueId).Requires(nameof(CanDelete<#= listName #>)).IsTrue();
+
+            // Apply Event
+            Domain_ApplyEvent(new Deleted<#= vo #>DE(TenantUniqueId, UniqueId, <#= ToCamelCase(listName) #>UniqueId));
+        }
+// validation methods
+	    public bool CanDelete<#= listName #>(UniqueId <#= ToCamelCase(listName) #>UniqueId)
+        {
+            return <#= listName #>.Any(s => s.UniqueId == <#= ToCamelCase(listName) #>UniqueId);
+        }
+		  public bool CanAdd<#= listName #>(<#= vo #>VO <#= ToCamelCase(listName) #>)
+        {
+            if (<#= listName #>.Any(s => s == <#= ToCamelCase(listName) #>))
+                return false;
+            return true;
+        }
+// handle
+           private void Handle(Added<#= vo #>DE e)
+        {
+            var <#= ToCamelCase(vo) #> = <#= vo #>VO.Create(e.<#= vo #>UniqueId <# for (int i = 0; i < properties.Length; i++)  { #>,e.<#= ToCamelCase(properties[i]) #><#}#>);
+
+            _<#= ToCamelCase(vo) #>s.Add(<#= ToCamelCase(vo) #>);
+            _persistence<#= vo #>s.Add(<#= ToCamelCase(vo) #>);
+        }
+		        private void Handle(Deleted<#= vo #>DE e)
+        {
+            var <#= ToCamelCase(vo) #> = _<#= ToCamelCase(vo) #>s.Single(s => s.UniqueId == e.<#= vo #>UniqueId);
+            _<#= ToCamelCase(vo) #>s.Remove(<#= ToCamelCase(vo) #>);
+            _persistence<#= vo #>s.First(x => x.UniqueId == e.<#= vo #>UniqueId).Persistence_MarkAsDeleted();
+        }
+
+
+
+<#
+  // End of file.
+  SaveOutput(aggregate + "___" +vo + ".cs"); 
+#>
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using HC.Common;
+using HC.Integration.Domain.ValueObjects;
+using HC.Isaac.Domain.Aggregate.Shared;
+using Newtonsoft.Json;
+
+namespace HC.Isaac.Domain.Aggregate.<#= vo #>
+{
+    [Serializable]
+    public class <#= vo #>VO : ComparableValueObject
+    {
+        [JsonConstructor]
+        public <#= vo #>VO(
+<# for (int i = 0; i < properties.Length; i++)  { #>
+		    <#= datatype[i] #> <#= ToCamelCase(properties[i]) #> , 
+<#}#>
+            UniqueId uniqueId = null,
+            PersistenceState state = PersistenceState.Added
+            )
+            : base(state)
+        {
+            
+<# for (int i = 0; i < properties.Length; i++)  { #>
+		    this.<#= properties[i] #> = <#= ToCamelCase(properties[i]) #>;
+<#}#>
+            UniqueId = uniqueId == null ? UniqueId.Generate() : uniqueId;
+       
+        }
+<# for (int i = 0; i < properties.Length; i++)  { #>		
+		public <#= datatype[i] + " " + properties[i] #> { get; private set;}
+<# } #>
+        public UniqueId UniqueId { get; }
+
+        public void Persistence_MarkAsUnchanged()
+        {
+            this.State = PersistenceState.Unchanged;
+        }
+        public void Persistence_MarkAsDeleted()
+        {
+            this.State = PersistenceState.Deleted;
+        }     
+
+        public override IEnumerable<object> Domain_EqualityComponents()
+        {
+           // TODO : yield return..
+        }
+
+        public override IEnumerable<IComparable> Domain_ComparableComponents()
+        {
+            return Domain_EqualityComponents().Cast<IComparable>();
+        }
+		 public static <#= vo #>VO Create(UniqueId uniqueId<# for (int i = 0; i < properties.Length; i++)  { #>,<#= datatype[i] #> <#= ToCamelCase(properties[i]) #><#}#>)
+        {
+            return new <#= vo #>VO(<# for (int i = 0; i < properties.Length; i++) {#><#= ToCamelCase(properties[i]) #>,<#}#> uniqueId);
+        }
+    }
+}
+
+<#
+  // End of file.
+  SaveOutput(vo + "VO.cs"); 
+#>
+<#+
+private void SaveOutput(string outputFileName) {
+  string templateDirectory = Path.GetDirectoryName(Host.TemplateFile);
+  string outputFilePath = Path.Combine(templateDirectory, outputFileName);
+  File.WriteAllText(outputFilePath, this.GenerationEnvironment.ToString()); 
+  this.GenerationEnvironment.Remove(0, this.GenerationEnvironment.Length);
+}
+#>
+<#+
+
+     public string ToCamelCase(string str)
+     {                    
+         if(!string.IsNullOrEmpty(str) && str.Length > 1)
+         {
+             return Char.ToLowerInvariant(str[0]) + str.Substring(1);
+         }
+         return str;
+     }
+ 
+#>

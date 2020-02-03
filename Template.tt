@@ -5,15 +5,163 @@
 <#@ import namespace="System.IO" #>
 <#@ output extension=".cs" #>
 <#@ template hostSpecific="true"#>
-<# var datatype = new string [] {"Text", "LanguageVO", "PosPolarityENUM"}; #>
-<# var properties = new string [] {"Text", "Language", "DefaultPosPolarity"}; #>
+<# var datatype = new string [] {"UniqueId", "Text", "UniqueId" , "CaaVO" }; #>
+<# var properties = new string [] {"LanguageUniqueId", "Text", "DefaultCaa" }; #>
 <# var project = "Isaac"; #>
-<# var repository = "PosWordStringRepository"; #>
-<# var aggregate = "PosWordString" ; #>
-<# var classname = "PosWordString"; #>
+<# var repository = "AnnotatedWordStringRepository"; #>
+<# var aggregate = "AnnotatedWordString" ; #>
+<# var classname = "AnnotatedWordString"; #>
 <# var appCommands = true; #>
 <# var numberOfSteps = 0; #>
 <# var version = false; #>
+using HC.Common;
+using HC.Common.Presentation.Security;
+using HC.Isaac.Api.Areas.API.Controllers;
+using HC.Isaac.Application;
+using HC.Isaac.Application.Models.InputModel.<#= aggregate #>;
+using HC.Isaac.Application.Models.ViewModel.<#= aggregate #>;
+using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Threading.Tasks;
+
+namespace HC.Isaac.Api.Areas.API.Controllers
+{
+    [AuthorizeTenant(NeedsAdminAccess = true)]
+    [Route("V4.0/{cultureInfo:length(2):alpha}/tenant/{tenantUniqueId:guid}/<#= aggregate #>")]
+    public class <#= aggregate #>Controller : BaseController
+    {
+        private readonly <#= aggregate #>AS <#= aggregate.ToLower() #>AS;
+        private readonly AppSettings appSettings;
+
+        public <#= aggregate #>Controller()
+        {
+            this.<#= aggregate.ToLower() #>AS = ObjectContainer.Resolve<<#= aggregate #>AS>();
+            this.appSettings = ObjectContainer.Resolve<AppSettings>();
+
+            Condition.Requires(this.<#= aggregate.ToLower() #>AS, nameof(this.<#= aggregate.ToLower() #>AS)).IsNotNull();
+            Condition.Requires(this.appSettings, nameof(this.appSettings)).IsNotNull();
+        }
+
+        [ProducesResponseType(statusCode: 200)]
+        [ProducesResponseType(statusCode: 400, type: typeof(ValidationError[]))]
+        [HttpPost("Create")]
+        public async Task<IActionResult> Create(
+            [FromRoute]string cultureInfo,
+            [FromBody]CreateA<#= aggregate #>IM model)
+        {
+            // Handle possible exceptions
+            return await this.Exception.HandleForLoggingAsync(model.CorrelationUniqueId, model, async () =>
+            {
+                // Log request
+                var sw = Log.Request(Request, UniqueId.CreateIfNotNull(this.Membership.GetToken().User.Id), UniqueId.CreateIfNotNull(model.CorrelationUniqueId), model);
+
+                // Handle request
+                var result = await this.<#= aggregate.ToLower() #>AS.CreateAsync(this.Membership.GetToken().User.Id, model);
+
+                // Log response
+                Log.Response(Request, sw, UniqueId.CreateIfNotNull(model.CorrelationUniqueId), result);
+
+                // Return response
+                if (result.IsValid)
+                    return Ok();
+                else
+                    return BadRequest(result.Errors);
+            });
+        }
+
+        [ProducesResponseType(statusCode: 200)]
+        [ProducesResponseType(statusCode: 400, type: typeof(ValidationError[]))]
+        [HttpPut("Update")]
+        public async Task<IActionResult> Update(
+            [FromRoute]string cultureInfo,
+            [FromBody]Update<#= aggregate #>IM model)
+        {
+            // Handle possible exceptions
+            return await this.Exception.HandleForLoggingAsync(model.CorrelationUniqueId, model, async () =>
+            {
+                // Log request
+                var sw = Log.Request(Request, UniqueId.CreateIfNotNull(this.Membership.GetToken().User.Id), UniqueId.CreateIfNotNull(model.CorrelationUniqueId), model);
+
+                // Handle request
+                var result = await this.<#= aggregate.ToLower() #>AS.UpdateAsync(this.Membership.GetToken().User.Id, model);
+
+                // Log response
+                Log.Response(Request, sw, UniqueId.CreateIfNotNull(model.CorrelationUniqueId), result);
+
+                // Return response
+                if (result.IsValid)
+                    return Ok();
+                else
+                    return BadRequest(result.Errors);
+            });
+        }
+
+
+        [ProducesResponseType(statusCode: 200)]
+        [ProducesResponseType(statusCode: 400, type: typeof(ValidationError[]))]
+        [HttpPut("DeleteAsync")]
+        public async Task<IActionResult> DeleteAsync(
+            [FromRoute]string cultureInfo,
+            [FromBody]DeleteA<#= aggregate #>IM model)
+        {
+            // Handle possible exceptions
+            return await this.Exception.HandleForLoggingAsync(model.CorrelationUniqueId, model, async () =>
+            {
+                // Log request
+                var sw = Log.Request(Request, UniqueId.CreateIfNotNull(this.Membership.GetToken().User.Id), UniqueId.CreateIfNotNull(model.CorrelationUniqueId), model);
+
+                // Handle request
+                var result = await this.<#= aggregate.ToLower() #>AS.DeleteAsync(this.Membership.GetToken().User.Id, model);
+
+                // Log response
+                Log.Response(Request, sw, UniqueId.CreateIfNotNull(model.CorrelationUniqueId), result);
+
+                // Return response
+                if (result.IsValid)
+				    return Ok();
+                else
+                    return BadRequest(result.Errors);
+ 
+            });
+        }
+
+
+        [ProducesResponseType(statusCode: 200, type: typeof(<#= aggregate #>VM[]))]
+        [ProducesResponseType(statusCode: 400, type: typeof(ValidationError[]))]
+        [HttpGet("GetAll")]
+        public async Task<IActionResult> GetAll(
+            [FromRoute] string cultureInfo,
+            [FromRoute] Guid tenantUniqueId
+            )
+        {
+            // Generate query id
+            var queryUniqueId = UniqueId.Generate();
+
+            // Handle possible exceptions
+            return await this.Exception.HandleForLoggingAsync(queryUniqueId.Value, async () =>
+            {
+                // Log request
+                var sw = Log.Request(Request, UniqueId.CreateIfNotNull(this.Membership.GetToken().User.Id), queryUniqueId);
+
+                // Handle request
+                var result = await this.<#= aggregate.ToLower() #>AS.GetAllAsync(appSettings.Security.SuperTenantUniqueId, queryUniqueId.Value, this.Membership.GetToken().User.Id);
+
+                // Log response
+                Log.Response(Request, sw, queryUniqueId, result);
+
+                // Return response
+                if (result.IsValid)
+                    return Ok(result.Object);
+                else
+                    return BadRequest(result.Errors);
+            });
+        }
+    }
+}              
+<#
+  // End of file.
+  SaveOutput(aggregate + "Controller.cs");
+  #>
 using System.Collections.Generic;
 using HC.Common;
 using System.Diagnostics;
@@ -151,12 +299,14 @@ namespace HC.Isaac.Application.Query
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Newtonsoft.Json;
 
 namespace HC.Isaac.Application.Query
 {
     [Serializable]
     public class <#= aggregate #>GetAllQRY : HC.Query
     {
+		[JsonConstructor]
         public <#= aggregate #>GetAllQRY(
             // Default props
             Guid tenantUniqueId,
@@ -230,6 +380,32 @@ namespace HC.Isaac.Application
             }
             return result;
         }
+public async Task<Result> UpdateAsync(Guid userUniqueId, UpdateA<#= aggregate #>IM model)
+        {
+            // Init command processor with parameters
+            var commandProcessor = new CommandProcessor<UpdateA<#= aggregate #>CMD>(
+                new UpdateA<#= aggregate #>CMD(
+                    // Default props
+                    tenantUniqueId: model.TenantUniqueId,
+                    correlationUniqueId: model.CorrelationUniqueId,
+                    userUniqueId: userUniqueId,
+					version : model.Version,
+<# for (int i = 0; i < properties.Length; i++)  { #>
+					, model.<#= properties[i] #>
+<# } #>   
+                    ));
+
+            // Validate the query
+            var result = await commandProcessor.ValidateAsync();
+
+            // If the validation of the query was succesfull
+            if (result.IsValid)
+            {
+                // Process the query from the persistence
+                await commandProcessor.ProcessAsync();
+            }
+            return result;
+        }
         public async Task<Result> DeleteAsync(Guid userUniqueId, DeleteA<#= aggregate #>IM model)
         {
             // Init command processor with parameters
@@ -269,6 +445,7 @@ using Newtonsoft.Json;
 
 namespace HC.Isaac.Application.Models.ViewModel.<#= aggregate #>
 {
+   [Serializable]
     public class <#= aggregate #>VM : IViewModel, IObjectMapper
     {
         [DataMember]
@@ -313,13 +490,37 @@ namespace HC.Isaac.Application.Models.InputModel.CreateA<#= aggregate #>
         public Guid CorrelationUniqueId { get; set; }
         public Guid TenantUniqueId { get; set; }
 <# for (int i = 0; i < properties.Length; i++)  { #>
-		public <#= datatype[i] + " " + properties[i] #> {get;set;}
+		public <#= datatype[i] + " " + properties[i] #> { get; set; }
 <# } #>    
     }
 }
 <#
   // End of file.
   SaveOutput("CreateA" + aggregate + "IM.cs");
+  #>
+using System;
+using System.Collections.Generic;
+using System.Text;
+using Newtonsoft.Json;
+
+namespace HC.Isaac.Application.Models.InputModel.UpdateA<#= aggregate #>
+{
+    [Serializable]
+    public class UpdateA<#= aggregate #>IM : IInputModel
+    {
+        public Guid CorrelationUniqueId { get; set; }
+        public Guid TenantUniqueId { get; set; }
+		public Guid UniqueId { get; set; }		
+        [JsonConverter(typeof(VersionConverter))]
+        public long Version { get; set; }
+<# for (int i = 0; i < properties.Length; i++)  { #>
+		public <#= datatype[i] + " " + properties[i] #> { get; set; }
+<# } #>    
+    }
+}
+<#
+  // End of file.
+  SaveOutput("UpdateA" + aggregate + "IM.cs");
   #>
 
 
@@ -620,9 +821,9 @@ namespace HC.Isaac.Domain.Aggregate.<#= aggregate #>
         #endregion
         
         #region Properties
-		<# for (int i = 0; i < properties.Length; i++)  { #>
+<# for (int i = 0; i < properties.Length; i++)  { #>
 		public <#= datatype[i] + " " + properties[i] #> {get;set;}
-		<# } #>
+<# } #>
 
         #endregion Properties
 
@@ -639,7 +840,19 @@ namespace HC.Isaac.Domain.Aggregate.<#= aggregate #>
             Domain_ApplyEvent(new DeletedA<#= classname #>DE(this.TenantUniqueId, this.UniqueId));
 
             return this;
-        }       
+        }
+		
+		  public <#= aggregate #>AR Update(<# for (int i = 0; i < properties.Length; i++)  { #><# if(i > 0) { #> ,<# } #> <#= datatype[i] + " " + ToCamelCase(properties[i]) #><# } #>           
+            )
+        {
+            // Conditions
+            Condition.Requires(this.CanUpdate(<# for (int i = 0; i < properties.Length; i++)  { #><# if(i > 0) { #> ,<# } #> <#= ToCamelCase(properties[i]) #><# } #>), nameof(CanUpdate)).IsTrue();
+
+            // Init
+            Domain_ApplyEvent(new UpdatedA<#= aggregate #>DE(this.TenantUniqueId, this.UniqueId <# for (int i = 0; i < properties.Length; i++)  { #><# if(i > 0) { #> ,<# } #> <#=ToCamelCase(properties[i]) #><# } #>));
+
+            return this;
+        }
 
 
         #endregion
@@ -649,13 +862,21 @@ namespace HC.Isaac.Domain.Aggregate.<#= aggregate #>
 
         private void Handle(CreatedA<#= classname #>DE evt)
         {
-           <# foreach (string propertyName in properties)  { #>
-			this.<#= propertyName #> = evt.<#= propertyName #>;
-		   <# } #>
+<# foreach (string propertyName in properties)  { #>
+		this.<#= propertyName #> = evt.<#= propertyName #>;
+<# } #>
         }      
         private void Handle(DeletedA<#= classname #>DE evnt)
         {
             this.Persistence_MarkAsDeleted();
+        }
+
+		private void <#= aggregate #>(UpdatedAPosWordStringDE evnt)
+        {
+<# foreach (string propertyName in properties)  { #>
+		this.<#= propertyName #> = evt.<#= propertyName #>;
+<# } #>
+            
         }
         #endregion
 
@@ -666,6 +887,11 @@ namespace HC.Isaac.Domain.Aggregate.<#= aggregate #>
            // Add validation to delete !
 		   // yield return this.Text; 
         }
+		public bool CanUpdate(<# for (int i = 0; i < properties.Length; i++)  { #><# if(i > 0) { #> ,<# } #> <#= datatype[i] + " " + ToCamelCase(properties[i]) #><# } #>)
+        {
+            return true;
+        }
+
     
         #endregion
 
@@ -701,6 +927,37 @@ namespace HC.Isaac.Domain.Aggregate.<#= aggregate #>
 <#
   // End of file.
   SaveOutput(classname + "AR.cs");
+  #>
+  using HC.Common;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.Text;
+using HC.Integration.Domain.ValueObjects;
+using HC.Isaac.Domain.Aggregate.Shared;
+
+namespace HC.Isaac.Domain.Aggregate.<#= aggregate #>.DE
+{
+    [Serializable]
+    public class UpdatedA<#= aggregate #>DE : DomainEvent
+    {
+        [JsonConstructor]
+        public UpdatedA<#= aggregate #>DE(TenantUniqueId tenantUniqueId, UniqueId uniqueId, <# for (int i = 0; i < properties.Length; i++)  { #><# if(i > 0) { #> ,<# } #> <#= datatype[i] + " " + ToCamelCase(properties[i]) #><# } #>)
+            : base(tenantUniqueId, uniqueId)
+        {
+            uniqueId.Requires().IsNotNull();
+<# foreach (string propertyName in properties)  { #>
+		this.<#= propertyName #> = <#= propertyName.ToLower() #>;
+<# } #>
+        }
+<# for (int i = 0; i < properties.Length; i++)  { #>
+		public <#= datatype[i] + " " + properties[i] #> {get;set;}
+<# } #>
+    }
+}
+<#
+  // End of file.
+  SaveOutput("UpdatedA" + classname + "DE.cs");
   #>
 <# if (appCommands){ #>
 using Newtonsoft.Json;
@@ -1205,4 +1462,16 @@ private void SaveOutput(string outputFileName) {
   File.WriteAllText(outputFilePath, this.GenerationEnvironment.ToString()); 
   this.GenerationEnvironment.Remove(0, this.GenerationEnvironment.Length);
 }
+#>
+<#+
+
+     public string ToCamelCase(string str)
+     {                    
+         if(!string.IsNullOrEmpty(str) && str.Length > 1)
+         {
+             return Char.ToLowerInvariant(str[0]) + str.Substring(1);
+         }
+         return str;
+     }
+ 
 #>
