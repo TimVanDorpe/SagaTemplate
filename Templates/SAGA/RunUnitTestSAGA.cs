@@ -34,7 +34,7 @@ namespace HC.Swatson.Processor.Saga
             Condition.Requires(this.AppSettings, nameof(this.AppSettings)).IsNotNull();
         }
 
-        public CreateATenantSAGA(
+        public RunUnitTestSAGA(
             IProcessLogger logger,
             AppSettings appSettings
             )
@@ -71,7 +71,7 @@ namespace HC.Swatson.Processor.Saga
             
 
             // Send CreateAUser1CMD on the context 
-            await context.SendCommandAsync(command.MapToCommand1() , this.AppSettings.Security.Signature.Key, this.AppSettings.Security.Signature.Salt);
+            await context.SendCommandAsync(command.MapToCommand() , this.AppSettings.Security.Signature.Key, this.AppSettings.Security.Signature.Salt);
 
             // Set as complete
             await Task.CompletedTask;
@@ -154,5 +154,22 @@ namespace HC.Swatson.Processor.Saga
             await Task.CompletedTask;
         }     
    
+
+   protected override void ConfigureHowToFindSaga(SagaPropertyMapper<RunUnitTestSD> mapper)
+        {
+            mapper.ConfigureMapping<RunUnitTestCMD>(cmd => cmd.CorrelationUniqueId)
+               .ToSaga(sd => sd.Identifier);
+	
+            mapper.ConfigureMapping<RunUnitTest1RM>(cmd => cmd.CorrelationUniqueId)
+               .ToSaga(sd => sd.Identifier);   
+	
+            mapper.ConfigureMapping<RunUnitTest2RM>(cmd => cmd.CorrelationUniqueId)
+               .ToSaga(sd => sd.Identifier);   
+	
+            mapper.ConfigureMapping<RunUnitTest3RM>(cmd => cmd.CorrelationUniqueId)
+               .ToSaga(sd => sd.Identifier);   
+   
+
+        }
     }
 }

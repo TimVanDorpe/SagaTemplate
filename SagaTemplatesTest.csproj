@@ -24,6 +24,11 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Template.tt</DependentUpon>
     </Compile>
+    <Compile Update="Templates\SagaCMD\SagaCMDTT.cs">
+      <DependentUpon>SagaCMDTT.tt</DependentUpon>
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+    </Compile>
     <Compile Update="Templates\SAGA\SagaTT.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
@@ -51,6 +56,10 @@
     <None Update="Template.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>Template.cs</LastGenOutput>
+    </None>
+    <None Update="Templates\SagaCMD\SagaCMDTT.tt">
+      <LastGenOutput>SagaCMDTT.cs</LastGenOutput>
+      <Generator>TextTemplatingFileGenerator</Generator>
     </None>
     <None Update="Templates\SAGA\SagaTT.tt">
       <LastGenOutput>SagaTT.cs</LastGenOutput>

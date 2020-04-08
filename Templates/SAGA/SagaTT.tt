@@ -4,8 +4,6 @@
 <#@ import namespace="System.IO" #>
 <#@ output extension=".cs" #>
 <#@ template hostSpecific="true"#>
-<# var datatype = new string [] {"bool", "PosVO"}; #>
-<# var properties = new string [] {"Noiseless","Pos"}; #>
 <# var project = "Swatson"; #>
 <# var action = "RunUnitTest" ; #>
 <# var numberSteps =3 ; #>
@@ -44,7 +42,7 @@ namespace HC.<#= project #>.Processor.Saga
             Condition.Requires(this.AppSettings, nameof(this.AppSettings)).IsNotNull();
         }
 
-        public CreateATenantSAGA(
+        public <#= action #>SAGA(
             IProcessLogger logger,
             AppSettings appSettings
             )
@@ -81,7 +79,7 @@ namespace HC.<#= project #>.Processor.Saga
             
 
             // Send CreateAUser1CMD on the context 
-            await context.SendCommandAsync(command.MapToCommand1() , this.AppSettings.Security.Signature.Key, this.AppSettings.Security.Signature.Salt);
+            await context.SendCommandAsync(command.MapToCommand() , this.AppSettings.Security.Signature.Key, this.AppSettings.Security.Signature.Salt);
 
             // Set as complete
             await Task.CompletedTask;
@@ -115,12 +113,126 @@ namespace HC.<#= project #>.Processor.Saga
             await Task.CompletedTask;
         }     
 <# } #>   
+
+   protected override void ConfigureHowToFindSaga(SagaPropertyMapper<<#= action #>SD> mapper)
+        {
+            mapper.ConfigureMapping<<#= action #>CMD>(cmd => cmd.CorrelationUniqueId)
+               .ToSaga(sd => sd.Identifier);
+<# for (int i = 1; i < numberSteps + 1; i++)  { #>	
+            mapper.ConfigureMapping<<#= action + i.ToString()#>RM>(cmd => cmd.CorrelationUniqueId)
+               .ToSaga(sd => sd.Identifier);   
+<# } #>   
+
+        }
     }
 }
 <#
   // End of file.
   SaveOutput(action + "SAGA.cs");
   #>
+using HC.<#= project #>.Application.Command;
+using HC.<#= project #>.Processor.Saga.State;
+using NServiceBus;
+using System;
+
+namespace HC.<#= project #>.Processor.Saga
+{
+    public class <#= action #>SD : ContainSagaData
+    {
+        public <#= action #>SS State { get; set; }
+        public Guid Identifier { get; set; }
+        public <#= action #>CMD Command { get; set; }
+
+    }
+}
+<#
+  // End of file.
+  SaveOutput(action + "SD.cs");
+  #>
+namespace HC.<#= project #>.Processor.Saga.State
+{
+    public enum <#= action #>SS
+    {
+        Start,
+<# for (int i = 1; i < numberSteps + 1; i++)  { #>
+        Step<#= i #>Done,
+<# } #>     
+    }
+
+    public static class <#= action #>State
+    {     
+        public static int Total = <#= numberSteps #>;
+<# for (int i = 1; i < numberSteps + 1; i++)  { #>
+        public static string Step<#= i.ToString() #> = "Step<#= i.ToString() #>";
+<# } #>  
+    }
+}
+<#
+  // End of file.
+  SaveOutput(action + "SS.cs");
+  #>
+<# for (int i = 1; i < numberSteps + 1; i++)  { #>
+using HC.Common;
+using System;
+namespace HC.<#= project #>.Processor.Saga.ReplyMessage
+{
+    public class <#= action + i.ToString() #>RM : HC.ReplyMessage
+    {
+        public <#= action + i.ToString() #>RM(
+            Guid tenantUniqueId,
+            Guid correlationUniqueId,
+            Guid userUniqueId,
+            UniqueId uniqueId
+            )
+            :base(tenantUniqueId, correlationUniqueId, userUniqueId)
+        {
+            this.UniqueId = uniqueId;
+        }
+
+        public UniqueId UniqueId { get; set; }
+    }
+}
+<#
+  // End of file.
+  SaveOutput(action + i.ToString() + "RM.cs");
+  #>        
+<# } #>  
+using HC.<#= project #>.Application.Command;
+using HC.<#= project #>.Processor.Saga.Command;
+using HC.<#= project #>.Processor.Saga.ReplyMessage;
+namespace HC.<#= project #>.Processor
+{
+    public static class <#= action #>Mapper
+    {
+<# for (int i = 1; i < numberSteps + 1; i++)  { #>
+        public static <#= action + i.ToString() #>RM MapToReplyMessage(this <#= action + i.ToString() #>CMD command)
+        {
+            return new <#= action + i.ToString() #>RM(
+               tenantUniqueId: command.TenantUniqueId,
+               correlationUniqueId: command.CorrelationUniqueId,
+               userUniqueId: command.UserUniqueId          
+            );
+        }
+<# } #>  
+
+<# for (int i = 1; i < numberSteps + 1; i++)  { #> 
+        public static <#= action + i.ToString() #>CMD MapToCommand(this <#= action + i.ToString()#>RM message)
+        {
+            return new <#= action + i.ToString() #>CMD(
+                tenantUniqueId: message.TenantUniqueId,
+                correlationUniqueId: message.CorrelationUniqueId,
+                userUniqueId: message.UserUniqueId             
+            );
+        }
+<# } #>  
+     }
+}
+<#
+  // End of file.
+  SaveOutput(action + "Mapper.cs");
+  #>     
+
+
 <#+
 private void SaveOutput(string outputFileName) {
   string templateDirectory = Path.GetDirectoryName(Host.TemplateFile);
