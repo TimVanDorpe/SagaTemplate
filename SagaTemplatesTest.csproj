@@ -5,22 +5,6 @@
     <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Compile Include="Template.txt">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Template.tt</DependentUpon>
-    </Compile>
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="Template.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Template.tt</DependentUpon>
-    </None>
-  </ItemGroup>
-
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.App" />
@@ -40,12 +24,17 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Template.tt</DependentUpon>
     </Compile>
+    <Compile Update="Templates\SAGA\SagaTT.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>SagaTT.tt</DependentUpon>
+    </Compile>
     <Compile Update="TemplateUpdate.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
       <DependentUpon>TemplateUpdate.tt</DependentUpon>
     </Compile>
-    <Compile Update="TemplateVO.cs">
+    <Compile Update="Templates\VO2\TemplateVO.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
       <DependentUpon>TemplateVO.tt</DependentUpon>
@@ -63,11 +52,15 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>Template.cs</LastGenOutput>
     </None>
+    <None Update="Templates\SAGA\SagaTT.tt">
+      <LastGenOutput>SagaTT.cs</LastGenOutput>
+      <Generator>TextTemplatingFileGenerator</Generator>
+    </None>
     <None Update="TemplateUpdate.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>TemplateUpdate.cs</LastGenOutput>
     </None>
-    <None Update="TemplateVO.tt">
+    <None Update="Templates\VO2\TemplateVO.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>TemplateVO.cs</LastGenOutput>
     </None>
@@ -79,7 +72,7 @@
 
 
   <ItemGroup>
-    <Folder Include="Templates\" />
+    <Folder Include="Templates\agg\" />
   </ItemGroup>
 
 </Project>

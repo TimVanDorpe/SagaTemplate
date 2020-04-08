@@ -4,12 +4,12 @@
 <#@ import namespace="System.IO" #>
 <#@ output extension=".cs" #>
 <#@ template hostSpecific="true"#>
-<# var datatype = new string [] {"DistanceVO", "PosTypeENUM?","Text?", "bool"}; #>
-<# var properties = new string [] {"Distance","PosType","SpecificWord", "Noiseless"}; #>
+<# var datatype = new string [] {"bool", "PosVO"}; #>
+<# var properties = new string [] {"Noiseless","Pos"}; #>
 <# var project = "Isaac"; #>
-<# var aggregate = "PosWordString" ; #>
-<# var vo = "MuposCondition" ; #>
-<# var listName = "MuposConditions"; #>
+<# var aggregate = "AnnotatedWordString" ; #>
+<# var vo = "NarcisticCondition" ; #>
+<# var listName = "EnvironmentConditions"; #>
 using System;
 using HC.Common;
 using Newtonsoft.Json;
@@ -105,7 +105,7 @@ namespace HC.Isaac.Domain.Aggregate.<#= aggregate #>
 // handle
            private void Handle(Added<#= vo #>DE e)
         {
-            var <#= ToCamelCase(vo) #> = <#= vo #>VO.Create(e.<#= vo #>UniqueId <# for (int i = 0; i < properties.Length; i++)  { #>,e.<#= ToCamelCase(properties[i]) #><#}#>);
+            var <#= ToCamelCase(vo) #> = <#= vo #>VO.Create(e.<#= vo #>UniqueId <# for (int i = 0; i < properties.Length; i++)  { #>,e.<#= properties[i] #><#}#>);
 
             _<#= ToCamelCase(vo) #>s.Add(<#= ToCamelCase(vo) #>);
             _persistence<#= vo #>s.Add(<#= ToCamelCase(vo) #>);

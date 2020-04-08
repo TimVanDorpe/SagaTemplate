@@ -5,12 +5,12 @@
 <#@ import namespace="System.IO" #>
 <#@ output extension=".cs" #>
 <#@ template hostSpecific="true"#>
-<# var datatype = new string [] {"UniqueId", "Text", "UniqueId" , "CaaVO" }; #>
-<# var properties = new string [] {"LanguageUniqueId", "Text", "DefaultCaa" }; #>
+<# var datatype = new string [] {"UniqueId" }; #>
+<# var properties = new string [] {"UniqueId"}; #>
 <# var project = "Isaac"; #>
-<# var repository = "AnnotatedWordStringRepository"; #>
-<# var aggregate = "AnnotatedWordString" ; #>
-<# var classname = "AnnotatedWordString"; #>
+<# var repository = "RunSwatsonUnitTestsCH"; #>
+<# var aggregate = "RunSwatsonUnitTests" ; #>
+<# var classname = "RunSwatsonUnitTests"; #>
 <# var appCommands = true; #>
 <# var numberOfSteps = 0; #>
 <# var version = false; #>

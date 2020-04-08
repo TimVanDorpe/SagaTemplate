@@ -1,0 +1,143 @@
+﻿<#@ template debug="false" hostspecific="true" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System" #>
+<#@ import namespace="System.IO" #>
+<#@ output extension=".cs" #>
+<#@ template hostSpecific="true"#>
+<# var datatype = new string [] {"bool", "PosVO"}; #>
+<# var properties = new string [] {"Noiseless","Pos"}; #>
+<# var project = "Swatson"; #>
+<# var action = "RunUnitTest" ; #>
+<# var numberSteps =3 ; #>
+using System;
+using System.Threading.Tasks;
+using HC.<#= project #>.Application.Command;
+using HC.<#= project #>.Processor.Saga.ReplyMessage;
+using HC.<#= project #>.Processor.Saga.State;
+using HC.Common;
+using HC.Common.Processor.Logging;
+using HC.Common.Processor.Security;
+using NServiceBus;
+
+namespace HC.<#= project #>.Processor.Saga
+{
+    public class <#= action #>SAGA :
+        Saga<<#= action #>SD>, 
+        IAmStartedByMessages<<#= action #>CMD>,
+<# for (int i = 1; i < numberSteps + 1; i++)  { #>
+		 IHandleMessages<<#= action + i.ToString() #>RM> <# if(numberSteps != i){ #>,<#}#>        
+<# } #>        
+    {
+        private readonly IProcessLogger Log;
+        private readonly AppSettings AppSettings;
+
+        // In order to test the SAGA, the constructor can't contain any parameter. See https://docs.particular.net/nservicebus/testing/fluent 
+        // for more information about this topic.
+        public <#= action #>SAGA()
+        {
+            // Init
+            this.Log = ObjectContainer.Resolve<IProcessLogger>();
+            this.AppSettings = ObjectContainer.Resolve<AppSettings>();
+
+            // Conditions
+            Condition.Requires(this.Log, nameof(this.Log)).IsNotNull();
+            Condition.Requires(this.AppSettings, nameof(this.AppSettings)).IsNotNull();
+        }
+
+        public CreateATenantSAGA(
+            IProcessLogger logger,
+            AppSettings appSettings
+            )
+        {
+            // Conditions
+            Condition.Requires(logger, nameof(logger)).IsNotNull();
+            Condition.Requires(appSettings, nameof(appSettings)).IsNotNull();
+
+            // Init
+            this.Log = logger;
+            this.AppSettings = appSettings;
+        }
+
+          public async Task Handle(<#= action #>CMD command, IMessageHandlerContext context)
+        {
+            // Conditions
+            context.Requires(nameof(context)).IsNotNull();
+            command.Requires(nameof(command)).IsNotNull();
+            command.UniqueId.Requires(nameof(command.UniqueId)).IsNotNull();
+            command.UserUniqueId.Requires(nameof(command.UserUniqueId)).IsNotEqualTo(new Guid());
+            command.TenantUniqueId.Requires(nameof(command.TenantUniqueId)).IsNotEqualTo(new Guid());
+            command.CorrelationUniqueId.Requires(nameof(command.CorrelationUniqueId)).IsNotEqualTo(new Guid());
+
+            // Init log
+            this.Log.SagaStart( command.UserUniqueId.ToUniqueId(), command.CorrelationUniqueId.ToUniqueId(), command);
+
+            // Check if signature is valid
+            command.ValidateCommand(this.AppSettings.Security.Signature.Key, this.AppSettings.Security.Signature.Salt);
+
+            // Update saga entity
+            this.Data.State = <#= action #>SS.Start;
+            this.Data.Command = command;
+            this.Data.Identifier = command.CorrelationUniqueId;
+            
+
+            // Send CreateAUser1CMD on the context 
+            await context.SendCommandAsync(command.MapToCommand1() , this.AppSettings.Security.Signature.Key, this.AppSettings.Security.Signature.Salt);
+
+            // Set as complete
+            await Task.CompletedTask;
+        }
+
+
+<# for (int i = 1; i < numberSteps + 1; i++)  { #>
+		
+          public async Task Handle(<#= action + i.ToString() #>RM message, IMessageHandlerContext context)
+        {
+            // Conditions
+            context.Requires(nameof(context)).IsNotNull();
+            message.Requires(nameof(message)).IsNotNull();
+            message.UserUniqueId.Requires(nameof(message.UserUniqueId)).IsNotEqualTo(new Guid());
+            message.TenantUniqueId.Requires(nameof(message.TenantUniqueId)).IsNotEqualTo(new Guid());
+            message.CorrelationUniqueId.Requires(nameof(message.CorrelationUniqueId)).IsNotEqualTo(new Guid());
+
+            // Init log
+            this.Log.SagaStep(message.CorrelationUniqueId.ToUniqueId(), message);
+
+            // Check if signature is valid
+            message.ValidateReplyMessage(this.AppSettings.Security.Signature.Key, this.AppSettings.Security.Signature.Salt);
+
+            // Update saga entity
+            this.Data.State = <#= action #>SS.Step<#= i #>Done;
+       
+            // Send command on the context
+            await context.SendCommandAsync(message.MapToCommand(), this.AppSettings.Security.Signature.Key, this.AppSettings.Security.Signature.Salt);
+
+            // Set as complete
+            await Task.CompletedTask;
+        }     
+<# } #>   
+    }
+}
+<#
+  // End of file.
+  SaveOutput(action + "SAGA.cs");
+  #>
+<#+
+private void SaveOutput(string outputFileName) {
+  string templateDirectory = Path.GetDirectoryName(Host.TemplateFile);
+  string outputFilePath = Path.Combine(templateDirectory, outputFileName);
+  File.WriteAllText(outputFilePath, this.GenerationEnvironment.ToString()); 
+  this.GenerationEnvironment.Remove(0, this.GenerationEnvironment.Length);
+}
+#>
+<#+
+
+     public string ToCamelCase(string str)
+     {                    
+         if(!string.IsNullOrEmpty(str) && str.Length > 1)
+         {
+             return Char.ToLowerInvariant(str[0]) + str.Substring(1);
+         }
+         return str;
+     }
+ 
+#>
