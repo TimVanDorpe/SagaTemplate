@@ -1,16 +1,15 @@
 ﻿<#@ template debug="false" hostspecific="true" language="C#" #>
-
 <#@ assembly name="System.Core" #>
 <#@ import namespace="System" #>
 <#@ import namespace="System.IO" #>
 <#@ output extension=".cs" #>
 <#@ template hostSpecific="true"#>
 <# var datatype = new string [] {"UniqueId" }; #>
-<# var properties = new string [] {"UniqueId"}; #>
+<# var properties = new string [] {"CategoryNodeUniqueId"}; #>
 <# var project = "Isaac"; #>
-<# var repository = "RunSwatsonUnitTestsCH"; #>
-<# var aggregate = "RunSwatsonUnitTests" ; #>
-<# var classname = "RunSwatsonUnitTests"; #>
+<# var repository = "CategoryNode"; #>
+<# var aggregate = "CategoryNode" ; #>
+<# var classname = "CategoryNode"; #>
 <# var appCommands = true; #>
 <# var numberOfSteps = 0; #>
 <# var version = false; #>

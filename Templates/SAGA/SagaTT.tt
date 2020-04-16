@@ -231,6 +231,7 @@ namespace HC.<#= project #>.Processor
   // End of file.
   SaveOutput(action + "Mapper.cs");
   #>     
+ 
 
 
 <#+
