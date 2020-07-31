@@ -4,10 +4,10 @@
 <#@ import namespace="System.IO" #>
 <#@ output extension=".cs" #>
 <#@ template hostSpecific="true"#>
-<# var datatype = new string [] {"UniqueId", "Text", "UniqueId" , "CaaVO" }; #>
-<# var properties = new string [] {"LanguageUniqueId", "Text", "DefaultCaa" }; #>
+<# var datatype = new string [] {, "Text", "UniqueId" , "UniqueId" }; #>
+<# var properties = new string [] { "Text", "FrameworkUniqueId"  , "CategoryUniqueId"}; #>
 <# var project = "Isaac"; #>
-<# var aggregate = "AnnotatedWordString" ; #>
+<# var aggregate = "Alias" ; #>
 using System;
 using System.Collections.Generic;
 using System.Text;

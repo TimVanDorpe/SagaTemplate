@@ -5,15 +5,15 @@
 <#@ import namespace="System.IO" #>
 <#@ output extension=".cs" #>
 <#@ template hostSpecific="true"#>
-<# var datatype = new string [] {"Text", "LanguageVO", "PosPolarityENUM"}; #>
-<# var properties = new string [] {"Text", "Language", "DefaultPosPolarity"}; #>
+<# var datatype = new string [] {"Text","UniqueId","UniqueId"}; #>
+<# var properties = new string [] {"Name","FrameworkUniqueId","CategoryUniqueId"}; #>
 <# var project = "Isaac"; #>
-<# var repository = "PosWordStringRepository"; #>
-<# var aggregate = "PosWordString" ; #>
-<# var classname = "PosWordString"; #>
+<# var repository = "AliasRepository"; #>
+<# var aggregate = "Alias" ; #>
+<# var classname = "Alias"; #>
 <# var appCommands = true; #>
 <# var numberOfSteps = 0; #>
-<# var version = false; #>
+<# var version = true; #>
 using HC.Common;
 using HC.Common.Infrastructure.DomainPersistence;
 using HC.Isaac.Application.Models.InputModel.DeleteA<#= aggregate #>;

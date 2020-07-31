@@ -24,6 +24,21 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Template.tt</DependentUpon>
     </Compile>
+    <Compile Update="Templates\Aggregate\aggregate.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>aggregate.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Templates\ApplicationCommand\ApplicationCMD.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>ApplicationCMD.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Templates\Events\Event.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Event.tt</DependentUpon>
+    </Compile>
     <Compile Update="Templates\SagaCMD\SagaCMDTT.cs">
       <DependentUpon>SagaCMDTT.tt</DependentUpon>
       <DesignTime>True</DesignTime>
@@ -33,6 +48,16 @@
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
       <DependentUpon>SagaTT.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Templates\Unit Tests\UnitT.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>UnitT.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Templates\Update\Update.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Update.tt</DependentUpon>
     </Compile>
     <Compile Update="TemplateUpdate.cs">
       <DesignTime>True</DesignTime>
@@ -57,6 +82,19 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>Template.cs</LastGenOutput>
     </None>
+    <None Update="Templates\Aggregate\aggregate.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>aggregate.cs</LastGenOutput>
+    </None>
+    <None Update="Templates\ApplicationCommand\ApplicationCMD.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>ApplicationCMD.cs</LastGenOutput>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Templates\Events\Event.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Event.cs</LastGenOutput>
+    </None>
     <None Update="Templates\SagaCMD\SagaCMDTT.tt">
       <LastGenOutput>SagaCMDTT.cs</LastGenOutput>
       <Generator>TextTemplatingFileGenerator</Generator>
@@ -64,6 +102,15 @@
     <None Update="Templates\SAGA\SagaTT.tt">
       <LastGenOutput>SagaTT.cs</LastGenOutput>
       <Generator>TextTemplatingFileGenerator</Generator>
+    </None>
+    <None Update="Templates\Unit Tests\UnitT.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>UnitT.cs</LastGenOutput>
+    </None>
+    <None Update="Templates\Update\Update.tt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Update.cs</LastGenOutput>
     </None>
     <None Update="TemplateUpdate.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
@@ -77,11 +124,6 @@
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>UnitTemplate.cs</LastGenOutput>
     </None>
-  </ItemGroup>
-
-
-  <ItemGroup>
-    <Folder Include="Templates\agg\" />
   </ItemGroup>
 
 </Project>

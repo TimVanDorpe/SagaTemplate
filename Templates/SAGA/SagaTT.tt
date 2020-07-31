@@ -4,9 +4,9 @@
 <#@ import namespace="System.IO" #>
 <#@ output extension=".cs" #>
 <#@ template hostSpecific="true"#>
-<# var project = "Swatson"; #>
-<# var action = "RunUnitTest" ; #>
-<# var numberSteps =3 ; #>
+<# var project = "Answer"; #>
+<# var action = "ParticipantAnswer" ; #>
+<# var numberSteps = 3 ; #>
 using System;
 using System.Threading.Tasks;
 using HC.<#= project #>.Application.Command;

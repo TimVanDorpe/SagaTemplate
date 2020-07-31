@@ -1,0 +1,213 @@
+﻿<#@ template debug="false" hostspecific="true" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System" #>
+<#@ import namespace="System.IO" #>
+<#@ output extension=".cs" #>
+<#@ template hostSpecific="true"#>
+<# var projects = new string [] {"Swatson","InsiderMetrics" }; #>
+<# var datatype = new string [] {"string","string" }; #>
+<# var prop = new string [] {"Name","Description"  }; #>
+<# var project = "Isaac"; #>
+<# var agg = "Sector"; #>
+<# var action = "SectorUpdated" ; #>
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace HC.Integration.Events.<#= project#>
+{
+   public class <#= action #>IE : Event
+    {
+        [JsonConstructor]
+        public <#= action #>IE(
+           Guid tenantUniqueId,
+           Guid correlationUniqueId,
+           Guid userUniqueId,
+           
+           Guid uniqueId,
+<# for (int i = 0; i < prop.Length; i++){ #>            
+            <#= datatype[i] + " " + prop[i].ToLower() #><# if(i != prop.Length - 1) {#>,<# } #>
+<# } #> 
+        )
+           : base(tenantUniqueId, correlationUniqueId, userUniqueId)
+        {
+            this.UniqueId = uniqueId;
+<# for (int i = 0; i < prop.Length; i++)  { #>
+		    this.<#= prop[i] #> = <#= prop[i].ToLower() #>;
+<# } #>
+        }
+
+        public Guid UniqueId { get; set; }
+<# for (int i = 0; i < prop.Length; i++)  { #>
+		public <#= datatype[i] + " " + prop[i] #>{ get; set;} 
+<# } #>
+    }
+}
+
+<#
+  // End of file.
+  SaveOutput(action + "IE.cs");
+  #> 
+<# for (int i = 0; i < projects.Length; i++){ #>            
+using System;
+using System.Threading.Tasks;
+using HC.Common;
+using HC.Common.Processor.NSB;
+using HC.Integration.Domain.ValueObjects;
+using HC.Integration.Events.Core;
+using NServiceBus;
+
+namespace HC.<#= projects[i] #>.Processor.Event
+{
+
+    public class <#= action #>EH : NsbMessageHandler< <#= action #>IE, <#= agg #>AR>
+    {
+        public <#= action #>EH(<#= agg #>Repository repository)
+            : base(repository)
+        {
+
+        }
+        public override async Task ExecuteAsync(<#= action #>IE command, IMessageHandlerContext context)
+        {
+            // Conditions
+            command.Requires(nameof(command)).IsNotNull();
+            command.UniqueId.Requires(nameof(command.UniqueId)).IsNotEqualTo(new Guid());
+            command.UserUniqueId.Requires(nameof(command.UserUniqueId)).IsNotEqualTo(new Guid());
+            command.TenantUniqueId.Requires(nameof(command.TenantUniqueId)).IsNotEqualTo(new Guid());
+            command.CorrelationUniqueId.Requires(nameof(command.CorrelationUniqueId)).IsNotEqualTo(new Guid());
+
+            // Log line
+            var sw = this.Log.MessageHandlerStart(command.UserUniqueId.ToUniqueId(), command.CorrelationUniqueId.ToUniqueId(), command);
+            
+            // TODO : 
+            // Create aggregate
+            var aggregate = 
+           
+            // Save touchpoint to persistence
+            await this.Repository.SaveAsync(command.CorrelationUniqueId.ToUniqueId(), command.UserUniqueId.ToUniqueId(), aggregate, context);
+
+            // Log line
+            this.Log.MessageHandlerFinish(sw, command.CorrelationUniqueId.ToUniqueId(), command);
+        }
+
+        public override AsyncPollingInfo ConfigureAsyncPolling()
+        {
+            return null;
+        }
+    }
+}
+
+<#
+  // End of file.
+  SaveOutput(action + i + "EH.cs");
+#>
+using System;
+using System.Threading.Tasks;
+using FluentValidation;
+using FluentValidation.Results;
+using HC.Common;
+using HC.Common.Processor.Logging;
+using HC.Common.Processor.NSB;
+using HC.Integration;
+using HC.Integration.Events.Core;
+
+namespace HC.<#= projects[i] #>.Processor.Event
+{
+    public class <#= action #>EV : NsbMessageValidator<<#= action #>IE>
+    {
+        private readonly <#= agg #>Repository repository;
+
+        public <#= action #>EV(
+            IProcessLogger logger,
+            <#= agg #>Repository repository
+        )
+            : base(logger)
+        {
+            // Conditions
+            repository.Requires(nameof(repository)).IsNotNull();
+            this.repository = repository;
+
+            // Validation rules
+
+            RuleFor(x => x.TenantUniqueId)
+                .NotNull()
+                .NotEqual(new Guid());
+
+            RuleFor(x => x.UserUniqueId)
+                .NotNull()
+                .NotEqual(new Guid());
+
+            RuleFor(x => x.CorrelationUniqueId)
+                .NotNull()
+                .NotEqual(new Guid());          
+
+            RuleFor(x => x.UniqueId)
+                .NotNull()
+                .NotEqual(new Guid());            
+        }
+
+        public override async Task<Result> ExecuteAsync(<#= action #>IE message)
+        {
+            // Conditions
+            message.Requires(nameof(message)).IsNotNull();
+
+            // Log line
+            var sw = Log.MessageValidatorStart(message.UserUniqueId.ToUniqueId(),
+                message.CorrelationUniqueId.ToUniqueId(), message);
+
+            // init results
+            var result = new Result(await base.ValidateAsync(message), message.CorrelationUniqueId.ToUniqueId());
+
+            // If fluent validation properties are valid
+            if (result.IsValid)
+            {
+                // Log line
+                this.Log.Debug("Fluent validation results are valid", message.CorrelationUniqueId.ToUniqueId());
+
+                // Check if the unique id isn't in the persistence yet
+                if (await repository.ExistsAsync(message.TenantUniqueId.ToTenantUniqueId(),
+                    message.UniqueId.ToUniqueId()))
+                {
+                    // Log line
+                    this.Log.ValidationError("Touchpoint already exist in the persistence",
+                        message.CorrelationUniqueId.ToUniqueId());
+
+                    // Add property failure to result object
+                    result.AddPropertyFailure(new ValidationFailure("uniqueId", "The aggregate doesn't exists in the persitence"));
+                }
+            }
+            else
+            {
+                // Log line
+                Log.ValidationError("Fluent validation results are invalid", message.CorrelationUniqueId.ToUniqueId(),
+                    result);
+            }
+
+            // Log line
+            Log.MessageValidatorFinish(sw, message.CorrelationUniqueId.ToUniqueId(), message);
+
+            // Return result
+            return result;
+        }
+
+        public override AsyncPollingInfo ConfigureAsyncPolling()
+        {
+            return null;
+        }
+    }
+}
+<#
+  // End of file.
+  SaveOutput(action + i + "EV.cs");
+#>
+<# } #> 
+
+<#+
+private void SaveOutput(string outputFileName) {
+  string templateDirectory = Path.GetDirectoryName(Host.TemplateFile);
+  string outputFilePath = Path.Combine(templateDirectory, outputFileName);
+  File.WriteAllText(outputFilePath, this.GenerationEnvironment.ToString()); 
+  this.GenerationEnvironment.Remove(0, this.GenerationEnvironment.Length);
+}
+#>

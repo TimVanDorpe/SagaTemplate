@@ -4,10 +4,10 @@
 <#@ import namespace="System.IO" #>
 <#@ output extension=".cs" #>
 <#@ template hostSpecific="true"#>
-<# var datatype = new string [] {"UniqueId", "Text", "UniqueId" , "CaaVO" , "List<MucaaRuleVO>"}; #>
-<# var properties = new string [] {"LanguageUniqueId", "Text", "DefaultCaa" , "MucaaRules"}; #>
+<# var datatype = new string [] {}; #>
+<# var properties = new string [] {}; #>
 <# var project = "Isaac"; #>
-<# var aggregate = "AnnotatedWordString" ; #>
+<# var aggregate = "Alias" ; #>
 using System;
 using System.Threading.Tasks;
 using Xunit;

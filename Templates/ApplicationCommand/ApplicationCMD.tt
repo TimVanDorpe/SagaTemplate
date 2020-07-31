@@ -1,0 +1,315 @@
+﻿<#@ template debug="false" hostspecific="true" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System" #>
+<#@ import namespace="System.IO" #>
+<#@ output extension=".cs" #>
+<#@ template hostSpecific="true"#>
+<# var project = "Answer"; #>
+<# var action = "ParticipantAnswer" ; #>
+<# var aggregate = "Answer" ; #>
+<# var datatype = new string [] { "Text", "UniqueId" , "UniqueId" }; #>
+<# var properties = new string [] { "Text", "FrameworkUniqueId"  , "CategoryUniqueId"}; #>
+using HC.Common;
+using System;
+
+namespace HC.<#= project #>.Application.Command
+{
+    [Serializable]
+    public class <#= action #>CMD : HC.Command
+    {
+        public <#= action #>CMD(
+            Guid tenantUniqueId,
+            Guid correlationUniqueId,
+            Guid userUniqueId,<# for (int i = 0; i < properties.Length; i++)  { #>
+            
+            <#= datatype[i] #> <#= ToLowerCase(properties[i]) #><# if( i != properties.Length - 1) {#>, <# } #>
+<#}#>)
+            : base(tenantUniqueId, correlationUniqueId, userUniqueId)
+        {
+<# for (int i = 0; i < properties.Length; i++)  { #>
+		   this.<#= properties[i] #> = <#= ToLowerCase(properties[i]) #>; 
+<#}#>
+        }
+<# for (int i = 0; i < properties.Length; i++)  { #>
+		public <#= datatype[i] #> <#= properties[i]#> { get; set; }
+<#}#>
+    }
+}      
+<#  // End of file.
+  SaveOutput(action + "CMD.cs");
+#>
+using System.Threading.Tasks;
+using HC.Common;
+using FluentValidation;
+using FluentValidation.Results;
+using System;
+using HC.Isaac.Infrastructure.DomainPersistence.Repository.<#= aggregate #>;
+using HC.Isaac.Application.Command;
+
+namespace HC.Isaac.Application.Command
+{
+    public class <#= action #>CV : CommandValidator<<#= action #>CMD>
+    {
+        private readonly <#= aggregate #>Repository repository;
+
+        public <#= action #>CV(
+            ILogger logger,
+            <#= aggregate #>Repository repository
+            )
+            : base(logger)
+        {
+            // Conditions
+            Condition.Requires(repository, nameof(repository)).IsNotNull();
+            this.repository = repository;
+
+            // Validation rules       
+            RuleFor(x => x.UniqueId.Value)
+                .NotNull()
+                .NotEqual(new Guid());
+
+            RuleFor(x => x.TenantUniqueId)
+                .NotNull()
+                .NotEqual(new Guid());
+
+            RuleFor(x => x.UserUniqueId)
+                .NotNull()
+                .NotEqual(new Guid());
+
+            RuleFor(x => x.CorrelationUniqueId)
+                .NotNull()
+                .NotEqual(new Guid());
+
+           // Add for each custom property rules to validate
+<# for (int i = 0; i < properties.Length; i++)  { #>
+		     RuleFor(x => x.<#= properties[i] #>)
+                .NotNull();                
+<#}#>  
+        }
+        public override async Task<Result> ExecuteAsync(<#= action #>CMD command, string ruleSet = null)
+        {
+            // Conditions
+            command.Requires(nameof(command)).IsNotNull();
+
+            // Log line
+            this.Log.Debug("Validate command", command.CorrelationUniqueId.ToUniqueId(), command);
+
+            // init result
+            var result = new Result(await base.ValidateAsync(command), command.CorrelationUniqueId.ToUniqueId());
+
+            // If fluent validation properties are valid
+            if (result.IsValid)
+            {
+                // Log line
+                this.Log.Debug("Fluent validation results are valid", command.CorrelationUniqueId.ToUniqueId());
+
+				// Validate if we can update the aggregate !
+				var aggregate = await this.repository.FindAsync(Loading.Full, command.TenantUniqueId.ToTenantUniqueId(),
+                    command.UniqueId);
+
+				if (aggregate == null)
+                {
+                    // Log line
+                    this.Log.ValidationError("UniqueId is wrong, this <#= aggregate.ToLower() #> doesn't exist or is disabled", command.CorrelationUniqueId.ToUniqueId(), command);
+
+                    // Add property failure to result object
+                    result.AddPropertyFailure(new ValidationFailure("UniqueId", "This  <#= aggregate.ToLower() #> doenst exists"));
+                }
+            }
+            else
+            {
+                // Log line
+                this.Log.ValidationError("Fluent validation results are invalid", command.CorrelationUniqueId.ToUniqueId(), result);
+            }
+
+            // Log line
+            this.Log.Debug("Validation is done", command.CorrelationUniqueId.ToUniqueId());
+
+            // Return result
+            return result;
+        }
+    }
+}
+<#  // End of file.
+  SaveOutput(action + "CV.cs");
+#>
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Threading.Tasks;
+using HC.Common;
+using HC.Common.Infrastructure.DomainPersistence;
+using HC.Isaac.Domain.Aggregate.<#= aggregate #>;
+using HC.Isaac.Infrastructure.DomainPersistence.Repository.<#= aggregate #>;
+
+namespace HC.Isaac.Application.Command
+{
+    public class <#= action #>CH : CommandHandler<<#= action #>CMD, <#= aggregate #>AR>
+    {
+        private readonly <#= aggregate #>Repository _repository;
+
+        public <#= action #>CH(<#= aggregate #>Repository repository)
+            : base(repository)
+        {
+            this._repository = repository;
+        }
+
+        protected override async Task ExecuteAsync(<#= action #>CMD command)
+        {
+            // Conditions
+            command.Requires(nameof(command)).IsNotNull();
+            command.UserUniqueId.Requires(nameof(command.UserUniqueId)).IsNotEqualTo(new Guid());
+            command.TenantUniqueId.Requires(nameof(command.TenantUniqueId)).IsNotEqualTo(new Guid());
+            command.CorrelationUniqueId.Requires(nameof(command.CorrelationUniqueId)).IsNotEqualTo(new Guid());
+
+            // Log line
+            this.Log.Debug("Handle command", command.CorrelationUniqueId.ToUniqueId(), command);
+
+            // Get the aggregate
+            var aggregate = await _repository.FindAsync(Loading.Full, command.TenantUniqueId.ToTenantUniqueId(),
+                command.UniqueId);
+
+            // DO STUFF
+
+            // Save aggregate to DB
+            await this._repository.SaveAsync(command.CorrelationUniqueId.ToUniqueId(), command.UserUniqueId.ToUniqueId(), aggregate);
+
+            // Log line
+            this.Log.Debug("Handling command is done", command.CorrelationUniqueId.ToUniqueId());
+
+        }
+    }
+}
+<#
+  // End of file.
+  SaveOutput( action + "CH.cs");
+  #>
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Threading.Tasks;
+using HC.Common;
+using HC.Common.Infrastructure.DomainPersistence;
+using HC.<#= project #>.Application.Models.InputModel.<#= aggregate #>;
+using HC.<#= project #>.Infrastructure.DomainPersistence.Repository.<#= aggregate #>;
+using Xunit;
+using Xunit.Abstractions;
+
+namespace HC.<#= project #>.Application.UnitTests.<#= aggregate #>
+{
+    public class <#= action #>
+    {
+        static <#= action #>()
+        {
+            if (Startup.IocConfig == null)
+                Startup.IocConfig = Startup.Init();
+        }
+
+        private readonly ITestOutputHelper output;       
+
+        public <#= action #>(ITestOutputHelper output)
+        {
+            this.output = output;
+        }
+        [Fact]
+        public async Task <#= action #>_ShouldReturnIsValidResult()
+        {
+            // Arrange
+            var <#= aggregate.ToLower() #>AS = ObjectContainer.Resolve<<#= aggregate #>AS>();
+            var <#= aggregate.ToLower() #>Rep = ObjectContainer.Resolve<<#= aggregate #>Repository>();           
+            var tenantUniqueId = Guid.Parse("");
+
+            var model = new <#= action #>IM()
+            {
+                CorrelationUniqueId = Guid.NewGuid(),
+                TenantUniqueId = tenantUniqueId,
+<# for (int i = 0; i < properties.Length; i++)  { #>
+			 <#= properties[i] #> = ,
+<# } #>
+            };
+            // Act
+            var result = await <#= aggregate.ToLower() #>AS.<#= action #>Async(Guid.NewGuid(), model);
+
+            // Assert
+            Assert.True(result.IsValid);
+        }      
+    }
+}
+<#
+  // End of file.
+  SaveOutput(action + "Tests.cs");
+  
+  #>
+using System;
+using System.Data.Common;
+using System.Linq;
+using System.Threading.Tasks;
+using HC.<#= project #>.Application.Models.InputModel.<#= aggregate #>;
+using HC.<#= project #>.Infrastructure.DomainPersistence.Repository.<#= aggregate #>;
+using Xunit;
+using Xunit.Abstractions;
+namespace HC.<#= project #>.Application.IntegrationTests.<#= aggregate #>
+{
+    public class <#= action #>_IntTest
+    {
+        static <#= action #>_IntTest()
+        {
+            if (Startup.IocConfig == null)
+                Startup.IocConfig = Startup.Init();
+        }
+
+        private readonly ITestOutputHelper output;
+
+        public <#= action #>_IntTest(ITestOutputHelper output)
+        {
+            this.output = output;
+        }
+        
+
+        [Fact(Skip = "only manual")]
+        //[Fact]
+        public async Task <#= action #>_ShouldBeValid()
+        {
+            // Arrange
+            var <#= aggregate.ToLower() #>As = ObjectContainer.Resolve<<#= aggregate #>AS>();            
+
+            var userId = Guid.Parse("88B79954-98E6-48F6-B350-ACE49D98130C");
+            var tenantId = Guid.Parse("");
+
+            var model = new <#= action #>IM()
+            {
+<# for (int i = 0; i < properties.Length; i++)  { #>
+			 <#= properties[i] #> = ,
+<# } #>
+             CorrelationUniqueId = Guid.NewGuid(),           
+             TenantUniqueId = tenantId
+            };
+            var result = await <#= aggregate.ToLower() #>As.<#= action #>Async(userId, model);
+
+            // Assert
+            Assert.True(result.IsValid);
+        }
+      
+    }
+}
+<#
+  // End of file.
+  SaveOutput(action + "IntTests.cs");
+  
+  #>
+<#+
+private void SaveOutput(string outputFileName) {
+  string templateDirectory = Path.GetDirectoryName(Host.TemplateFile);
+  string outputFilePath = Path.Combine(templateDirectory, outputFileName);
+  File.WriteAllText(outputFilePath, this.GenerationEnvironment.ToString()); 
+  this.GenerationEnvironment.Remove(0, this.GenerationEnvironment.Length);
+}
+#>
+<#+
+private string ToLowerCase(string s) {
+    if (s != string.Empty && char.IsUpper(s[0]))
+        {
+             s =  char.ToLower(s[0]) + s.Substring(1);
+        }
+        return s;
+    }
+#>

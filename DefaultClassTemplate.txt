@@ -1,0 +1,39 @@
+﻿using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace HC.Integration.Events.<#= project#>
+{
+   public class <#= action #>IE : Event
+    {
+        [JsonConstructor]
+        public <#= action #>IE(
+           Guid tenantUniqueId,
+           Guid correlationUniqueId,
+           Guid userUniqueId,
+           
+           Guid uniqueId,
+<# for (int i = 0; i < prop.Length; i++){ #>            
+            <#= datatype[i] + " " + prop[i].ToLower() #><# if(i != prop.Length - 1) {#>,<# } #>
+<# } #> 
+        )
+           : base(tenantUniqueId, correlationUniqueId, userUniqueId)
+        {
+            this.UniqueId = uniqueId;
+<# for (int i = 0; i < prop.Length; i++)  { #>
+		    this.<#= prop[i] #> = <#= prop[i].ToLower() #>;
+<# } #>
+        }
+
+        public Guid UniqueId { get; set; }
+<# for (int i = 0; i < prop.Length; i++)  { #>
+		public <#= datatype[i] + " " + prop[i] #>{ get; set;} 
+<# } #>
+    }
+}
+
+<#
+  // End of file.
+  SaveOutput(action + "IE.cs");
+  #> 

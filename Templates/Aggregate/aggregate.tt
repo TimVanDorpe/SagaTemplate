@@ -4,15 +4,15 @@
 <#@ import namespace="System.IO" #>
 <#@ output extension=".cs" #>
 <#@ template hostSpecific="true"#>
-<# var datatype = new string [] {"UniqueId" }; #>
-<# var properties = new string [] {"CategoryNodeUniqueId"}; #>
+<# var datatype = new string [] {"Text" , "UniqueId" , "UniqueId"}; #>
+<# var properties = new string [] {"Name", "FrameworkUniqueId", "CategoryUniqueId"}; #>
 <# var project = "Isaac"; #>
-<# var repository = "CategoryNode"; #>
-<# var aggregate = "CategoryNode" ; #>
-<# var classname = "CategoryNode"; #>
+<# var repository = "Alias"; #>
+<# var aggregate = "Alias" ; #>
+<# var classname = "Alias"; #>
 <# var appCommands = true; #>
 <# var numberOfSteps = 0; #>
-<# var version = false; #>
+<# var version = true; #>
 using HC.Common;
 using HC.Common.Presentation.Security;
 using HC.Isaac.Api.Areas.API.Controllers;
@@ -98,8 +98,8 @@ namespace HC.Isaac.Api.Areas.API.Controllers
 
         [ProducesResponseType(statusCode: 200)]
         [ProducesResponseType(statusCode: 400, type: typeof(ValidationError[]))]
-        [HttpPut("DeleteAsync")]
-        public async Task<IActionResult> DeleteAsync(
+        [HttpPut("Delete")]
+        public async Task<IActionResult> Delete(
             [FromRoute]string cultureInfo,
             [FromBody]DeleteA<#= aggregate #>IM model)
         {
@@ -528,7 +528,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace HC.Isaac.Application.Models.InputModel.DeleteA<#= aggregate #>
+namespace HC.Isaac.Application.Models.InputModel.<#= aggregate #>
 {
     [Serializable]
     public class DeleteA<#= aggregate #>IM : IInputModel
@@ -1042,6 +1042,18 @@ namespace HC.<#= project #>.Application.Command
             {
                 // Log line
                 this.Log.Debug("Fluent validation results are valid", command.CorrelationUniqueId.ToUniqueId());
+
+                 // Get aggregate from persistence
+                var aggregate = await this.repository.FindAsync(Loading.Full, command.TenantUniqueId.ToTenantUniqueId(), command.UniqueId.ToUniqueId());
+
+                if (aggregate == null)
+                {
+                    // Log line
+                    this.Log.ValidationError("Can't find this <#= classname #> in the persistence.", command.CorrelationUniqueId.ToUniqueId(), command);
+
+                    // Add property failure to result object
+                    result.AddPropertyFailure("uniqueId", "Can't find this <#= classname #> in the persistence. Please re-check the conditions.");
+                }
             }
             else
             {
