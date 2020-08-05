@@ -3,18 +3,18 @@ using HC.Common;
 using FluentValidation;
 using FluentValidation.Results;
 using System;
-using HC.Isaac.Infrastructure.DomainPersistence.Repository.Answer;
+using HC.Isaac.Infrastructure.DomainPersistence.Repository.Touchpoint;
 using HC.Isaac.Application.Command;
 
 namespace HC.Isaac.Application.Command
 {
-    public class ParticipantAnswerCV : CommandValidator<ParticipantAnswerCMD>
+    public class AddSectorToTouchpointCV : CommandValidator<AddSectorToTouchpointCMD>
     {
-        private readonly AnswerRepository repository;
+        private readonly TouchpointRepository repository;
 
-        public ParticipantAnswerCV(
+        public AddSectorToTouchpointCV(
             ILogger logger,
-            AnswerRepository repository
+            TouchpointRepository repository
             )
             : base(logger)
         {
@@ -40,15 +40,13 @@ namespace HC.Isaac.Application.Command
                 .NotEqual(new Guid());
 
            // Add for each custom property rules to validate
-		     RuleFor(x => x.Text)
+		     RuleFor(x => x.TouchpointUniqueId)
                 .NotNull();                
-		     RuleFor(x => x.FrameworkUniqueId)
-                .NotNull();                
-		     RuleFor(x => x.CategoryUniqueId)
+		     RuleFor(x => x.SectorUniqueId)
                 .NotNull();                
   
         }
-        public override async Task<Result> ExecuteAsync(ParticipantAnswerCMD command, string ruleSet = null)
+        public override async Task<Result> ExecuteAsync(AddSectorToTouchpointCMD command, string ruleSet = null)
         {
             // Conditions
             command.Requires(nameof(command)).IsNotNull();
@@ -72,10 +70,10 @@ namespace HC.Isaac.Application.Command
 				if (aggregate == null)
                 {
                     // Log line
-                    this.Log.ValidationError("UniqueId is wrong, this answer doesn't exist or is disabled", command.CorrelationUniqueId.ToUniqueId(), command);
+                    this.Log.ValidationError("UniqueId is wrong, this touchpoint doesn't exist or is disabled", command.CorrelationUniqueId.ToUniqueId(), command);
 
                     // Add property failure to result object
-                    result.AddPropertyFailure(new ValidationFailure("UniqueId", "This  answer doenst exists"));
+                    result.AddPropertyFailure(new ValidationFailure("UniqueId", "This  touchpoint doenst exists"));
                 }
             }
             else

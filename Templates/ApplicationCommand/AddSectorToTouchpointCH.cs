@@ -4,22 +4,22 @@ using System.Text;
 using System.Threading.Tasks;
 using HC.Common;
 using HC.Common.Infrastructure.DomainPersistence;
-using HC.Isaac.Domain.Aggregate.Answer;
-using HC.Isaac.Infrastructure.DomainPersistence.Repository.Answer;
+using HC.Isaac.Domain.Aggregate.Touchpoint;
+using HC.Isaac.Infrastructure.DomainPersistence.Repository.Touchpoint;
 
 namespace HC.Isaac.Application.Command
 {
-    public class ParticipantAnswerCH : CommandHandler<ParticipantAnswerCMD, AnswerAR>
+    public class AddSectorToTouchpointCH : CommandHandler<AddSectorToTouchpointCMD, TouchpointAR>
     {
-        private readonly AnswerRepository _repository;
+        private readonly TouchpointRepository _repository;
 
-        public ParticipantAnswerCH(AnswerRepository repository)
+        public AddSectorToTouchpointCH(TouchpointRepository repository)
             : base(repository)
         {
             this._repository = repository;
         }
 
-        protected override async Task ExecuteAsync(ParticipantAnswerCMD command)
+        protected override async Task ExecuteAsync(AddSectorToTouchpointCMD command)
         {
             // Conditions
             command.Requires(nameof(command)).IsNotNull();

@@ -4,16 +4,16 @@ using System.Text;
 using System.Threading.Tasks;
 using HC.Common;
 using HC.Common.Infrastructure.DomainPersistence;
-using HC.Answer.Application.Models.InputModel.Answer;
-using HC.Answer.Infrastructure.DomainPersistence.Repository.Answer;
+using HC.Swatson.Application.Models.InputModel.Touchpoint;
+using HC.Swatson.Infrastructure.DomainPersistence.Repository.Touchpoint;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace HC.Answer.Application.UnitTests.Answer
+namespace HC.Swatson.Application.UnitTests.Touchpoint
 {
-    public class ParticipantAnswer
+    public class AddSectorToTouchpoint
     {
-        static ParticipantAnswer()
+        static AddSectorToTouchpoint()
         {
             if (Startup.IocConfig == null)
                 Startup.IocConfig = Startup.Init();
@@ -21,28 +21,27 @@ namespace HC.Answer.Application.UnitTests.Answer
 
         private readonly ITestOutputHelper output;       
 
-        public ParticipantAnswer(ITestOutputHelper output)
+        public AddSectorToTouchpoint(ITestOutputHelper output)
         {
             this.output = output;
         }
         [Fact]
-        public async Task ParticipantAnswer_ShouldReturnIsValidResult()
+        public async Task AddSectorToTouchpoint_ShouldReturnIsValidResult()
         {
             // Arrange
-            var answerAS = ObjectContainer.Resolve<AnswerAS>();
-            var answerRep = ObjectContainer.Resolve<AnswerRepository>();           
+            var touchpointAS = ObjectContainer.Resolve<TouchpointAS>();
+            var touchpointRep = ObjectContainer.Resolve<TouchpointRepository>();           
             var tenantUniqueId = Guid.Parse("");
 
-            var model = new ParticipantAnswerIM()
+            var model = new AddSectorToTouchpointIM()
             {
                 CorrelationUniqueId = Guid.NewGuid(),
                 TenantUniqueId = tenantUniqueId,
-			 Text = ,
-			 FrameworkUniqueId = ,
-			 CategoryUniqueId = ,
+			 TouchpointUniqueId = ,
+			 SectorUniqueId = ,
             };
             // Act
-            var result = await answerAS.ParticipantAnswerAsync(Guid.NewGuid(), model);
+            var result = await touchpointAS.AddSectorToTouchpointAsync(Guid.NewGuid(), model);
 
             // Assert
             Assert.True(result.IsValid);

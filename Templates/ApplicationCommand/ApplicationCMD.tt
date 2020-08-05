@@ -4,11 +4,11 @@
 <#@ import namespace="System.IO" #>
 <#@ output extension=".cs" #>
 <#@ template hostSpecific="true"#>
-<# var project = "Answer"; #>
-<# var action = "ParticipantAnswer" ; #>
-<# var aggregate = "Answer" ; #>
-<# var datatype = new string [] { "Text", "UniqueId" , "UniqueId" }; #>
-<# var properties = new string [] { "Text", "FrameworkUniqueId"  , "CategoryUniqueId"}; #>
+<# var project = "Swatson"; #>
+<# var action = "AddSectorToTouchpoint" ; #>
+<# var aggregate = "Touchpoint" ; #>
+<# var datatype = new string [] { "UniqueId", "UniqueId"  }; #>
+<# var properties = new string [] { "TouchpointUniqueId", "SectorUniqueId"}; #>
 using HC.Common;
 using System;
 
@@ -43,10 +43,10 @@ using HC.Common;
 using FluentValidation;
 using FluentValidation.Results;
 using System;
-using HC.Isaac.Infrastructure.DomainPersistence.Repository.<#= aggregate #>;
-using HC.Isaac.Application.Command;
+using HC.<#= project #>.Infrastructure.DomainPersistence.Repository.<#= aggregate #>;
+using HC.<#= project #>.Application.Command;
 
-namespace HC.Isaac.Application.Command
+namespace HC.<#= project #>.Application.Command
 {
     public class <#= action #>CV : CommandValidator<<#= action #>CMD>
     {
@@ -138,10 +138,10 @@ using System.Text;
 using System.Threading.Tasks;
 using HC.Common;
 using HC.Common.Infrastructure.DomainPersistence;
-using HC.Isaac.Domain.Aggregate.<#= aggregate #>;
-using HC.Isaac.Infrastructure.DomainPersistence.Repository.<#= aggregate #>;
+using HC.<#= project #>.Domain.Aggregate.<#= aggregate #>;
+using HC.<#= project #>.Infrastructure.DomainPersistence.Repository.<#= aggregate #>;
 
-namespace HC.Isaac.Application.Command
+namespace HC.<#= project #>.Application.Command
 {
     public class <#= action #>CH : CommandHandler<<#= action #>CMD, <#= aggregate #>AR>
     {
@@ -294,6 +294,29 @@ namespace HC.<#= project #>.Application.IntegrationTests.<#= aggregate #>
 <#
   // End of file.
   SaveOutput(action + "IntTests.cs");
+  
+  #>
+using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace HC.<#= project #>.Application.Models.InputModel.<#= aggregate #>
+{
+    [Serializable]
+    public class AddSectorToTouchpointIM : IInputModel
+    {
+        public Guid CorrelationUniqueId { get; set; }
+        public Guid TenantUniqueId { get; set; }
+<# for (int i = 0; i < properties.Length; i++)  { #>
+		public <#= (datatype[i] #> <#= properties[i] #> { get; set; }
+<# } #>       
+    }
+}
+
+
+  <#
+  // End of file.
+  SaveOutput(action + "IM.cs");
   
   #>
 <#+
