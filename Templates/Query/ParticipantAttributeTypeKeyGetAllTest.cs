@@ -1,21 +1,16 @@
-using HC.Core.Application;
-using HC.Core.Application.UnitTests;
-using System;
-using System.Threading.Tasks;
-using NServiceBus.Testing;
-using Xunit;
 using HC.Common.UnitTesting;
+using HC.Core.Infrastructure.DomainPersistence.Repository.ParticipantAttributeTypeKey;
+using HC.Core.Test.Setup.Builders;
+using System;
+using System.Linq;
+using Xunit;
+using HC.Common.UnitTesting.Builders;
+using System.Threading.Tasks;
 
 namespace HC.Core.Application.UnitTests.ParticipantAttributeTypeKey
 {
-    public class ParticipantAttributeTypeKeyGetAllTests
-    {
-        static ParticipantAttributeTypeKeyTests()
-        {
-            if (Startup.IocConfig == null)
-                Startup.IocConfig = Startup.Init();
-        }       
-
+    public class ParticipantAttributeTypeKeyGetAllTests : TestFixture<Startup>
+    {            
         [Fact]
         public async Task CanParticipantAttributeTypeKeyGetAll()
         {

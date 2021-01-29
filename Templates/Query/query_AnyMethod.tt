@@ -10,24 +10,19 @@
 <# var aggregate = "ParticipantAttributeTypeKey" ; #>
 <# var action = "ParticipantAttributeTypeKeyGetAll" ; #>
 <# var model = "ParticipantAttributeTypeKey" ; #>
-using HC.<#= project #>.Application;
-using HC.<#= project #>.Application.UnitTests;
-using System;
-using System.Threading.Tasks;
-using NServiceBus.Testing;
-using Xunit;
 using HC.Common.UnitTesting;
+using HC.<#= project #>.Infrastructure.DomainPersistence.Repository.<#= aggregate #>;
+using HC.<#= project #>.Test.Setup.Builders;
+using System;
+using System.Linq;
+using Xunit;
+using HC.Common.UnitTesting.Builders;
+using System.Threading.Tasks;
 
 namespace HC.<#= project #>.Application.UnitTests.<#= aggregate #>
 {
-    public class <#= action #>Tests
-    {
-        static <#= aggregate #>Tests()
-        {
-            if (Startup.IocConfig == null)
-                Startup.IocConfig = Startup.Init();
-        }       
-
+    public class <#= action #>Tests : TestFixture<Startup>
+    {            
         [Fact]
         public async Task Can<#= action #>()
         {
@@ -46,6 +41,47 @@ namespace HC.<#= project #>.Application.UnitTests.<#= aggregate #>
 <#
   // End of file.
   SaveOutput(action + "Test.cs");
+  #>
+using HC.<#= project #>.Test.Setup;
+using System;
+using System.Threading.Tasks;
+using Xunit;
+using Xunit.Abstractions;
+using HC.Common.UnitTesting;
+
+namespace HC.<#= project #>.Application.IntegrationTests.<#= aggregate #>
+{
+    public class <#= action #>Tests : TestFixture<Startup>
+    {
+
+        private readonly ITestOutputHelper output;
+
+        public <#= action #>Tests(ITestOutputHelper output)
+        {
+            this.output = output;
+        }
+
+        [Fact(Skip = "only manual")]
+        //[Fact]
+        public async Task Get<#= action #>()
+        {
+            // Arrange
+            var service = Scope.Resolve<<#= aggregate #>AS>();
+
+            var userId = Guid.Parse("88B79954-98E6-48F6-B350-ACE49D98130C");
+            var tenantId = Guid.Parse("17DBC831-4CF2-4BD1-B0B3-09E17D605291");
+
+            var result = await service.<#= action #>(tenantId, Guid.NewGuid(), userId);
+
+            // Assert
+            Assert.True(result.IsValid);
+        }
+
+    }
+}
+<#
+  // End of file.
+  SaveOutput(action + "e2eTest.cs");
   #>
  using HC.Common;
 using HC.Common.Presentation.Logging;
