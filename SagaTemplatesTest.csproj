@@ -39,6 +39,11 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Event.tt</DependentUpon>
     </Compile>
+    <Compile Update="Templates\Query\query_AnyMethod.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>query_AnyMethod.tt</DependentUpon>
+    </Compile>
     <Compile Update="Templates\SagaCMD\SagaCMDTT.cs">
       <DependentUpon>SagaCMDTT.tt</DependentUpon>
       <DesignTime>True</DesignTime>
@@ -94,6 +99,11 @@
     <None Update="Templates\Events\Event.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>Event.cs</LastGenOutput>
+    </None>
+    <None Update="Templates\Query\query_AnyMethod.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>query_AnyMethod.cs</LastGenOutput>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="Templates\SagaCMD\SagaCMDTT.tt">
       <LastGenOutput>SagaCMDTT.cs</LastGenOutput>
