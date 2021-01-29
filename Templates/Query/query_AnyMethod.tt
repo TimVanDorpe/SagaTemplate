@@ -47,6 +47,35 @@ namespace HC.<#= project #>.Application.UnitTests.<#= aggregate #>
   // End of file.
   SaveOutput(action + "Test.cs");
   #>
+ using HC.Common;
+using HC.Common.Presentation.Logging;
+using HC.Common.Presentation.Security;
+using HC.<#= project #>.Application;
+using HC.<#= project #>.Application.Models.ViewModel.<#= model #>;
+using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace HC.<#= project #>.Api.Areas.API.Controllers
+{
+    [AuthorizeTenant(NeedsAdminAccess = false)]
+    [Route("V4.0/{cultureInfo:length(2):alpha}/tenant/{tenantUniqueId:guid}/<#= aggregate #>")]
+    public class <#= aggregate #>Controller : BaseController
+    {
+        private readonly <#= aggregate #>AS _<#= LowercaseFirst(aggregate) #>AS;
+         private readonly AppSettings _appSettings;
+
+        public <#= aggregate #>Controller(<#= aggregate #>AS <#= LowercaseFirst(aggregate) #>AS, GeneralExceptionHandling exception, ICrudLogger logger, ApiMembership membership , AppSettings appSettings)
+            : base(exception, logger, membership)
+        {
+           Condition.Requires(_<#= LowercaseFirst(aggregate) #>AS, nameof(<#= LowercaseFirst(aggregate) #>AS)).IsNotNull();
+           appSettings.Requires().IsNotNull();
+
+            _<#= LowercaseFirst(aggregate) #>AS = <#= LowercaseFirst(aggregate) #>AS;
+            _appSettings = appSettings;         
+        }
 
 		[ProducesResponseType(statusCode: 200, type: typeof(<#= model #>VM))]
         [ProducesResponseType(statusCode: 400, type: typeof(ValidationError[]))]
@@ -54,7 +83,7 @@ namespace HC.<#= project #>.Application.UnitTests.<#= aggregate #>
         public async Task<IActionResult> <#= action #>(
             [FromRoute] string cultureInfo,
             [FromRoute] Guid tenantUniqueId,
-            [FromRoute] Guid <#= model #>IM
+            [FromRoute] <#= model #> <#= model #>IM
         )
         {
             // Generate query id
@@ -66,9 +95,10 @@ namespace HC.<#= project #>.Application.UnitTests.<#= aggregate #>
                 // Log request
                 var sw = Log.Request(Request, UniqueId.CreateIfNotNull(this.Membership.GetToken().User.Id), queryUniqueId);
 
+                // supertenant _appSettings.Security.SuperTenantUniqueId
                 // Handle request
-                var result = await this.<#= aggregate #>AS.<#= action #>(this.Membership.GetToken().User.Id,
-                    appSettings.Security.SuperTenantUniqueId,
+                var result = await <#= LowercaseFirst(aggregate) #>AS.<#= action #>(this.Membership.GetToken().User.Id,
+                    tenantUniqueId,
                     queryUniqueId.Value,
                     <#= model #>IM);
 
@@ -82,11 +112,24 @@ namespace HC.<#= project #>.Application.UnitTests.<#= aggregate #>
                     return BadRequest(result.Errors);
             });
         }
+    }
+}
 <#
   // End of file.
   SaveOutput(aggregate + "Controller.cs");
   #>
+using HC.Common;
+using HC.<#= project #>.Application.Models.ViewModel.<#= model #>;
+using HC.<#= project #>.Application.Models.InputModel.<#= model #>;
+using HC.<#= project #>.Application.Query;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
+namespace HC.Core.Application
+{
+    public class <#= aggregate #>AS
+    {
     private readonly IQueryProcessor<<#= action #>QRY, <#= model #>VM> _<#= LowercaseFirst(action) #>Processor;
 
      public <#= aggregate #>AS(IQueryProcessor<<#= action #>QRY, <#= model #>VM> <#= LowercaseFirst(action) #>Processor)
@@ -98,7 +141,7 @@ public async Task<Result<<#= model #>VM>> <#= action #>(Guid userUniqueId, Guid 
         {
             // Init query processor with query + parameters
             var query = (
-                new <#= action #>(
+                new <#= action #>QRY(
                     tenantUniqueId: tenantUniqueId,
                     correlationUniqueId: correlationUniqueId,
                     userUniqueId: userUniqueId,
@@ -106,21 +149,24 @@ public async Task<Result<<#= model #>VM>> <#= action #>(Guid userUniqueId, Guid 
                 ));
 
             // Validate the query
-            var result = await _<#= LowercaseFirst(action) #>Processor queryProcessor.ValidateAsync(query);
+            var result = await _<#= LowercaseFirst(action) #>Processor.ValidateAsync(query);
 
             // If the validation of the query was succesfull
             if (result.IsValid)
             {
                 // Process the query from the persistence
-                result.Object = await queryProcessor.ProcessAsync();
+                result.Object = await _<#= LowercaseFirst(action) #>Processor.ProcessAsync(query);
             }
             return result;
         }
+    }
+}
 		<#
   // End of file.
   SaveOutput(aggregate + "AS.cs");
   #>
 using System;
+using HC.<#= project #>.Application.Models.InputModel.<#= model #>;
 
 namespace HC.<#= project #>.Application.Query
 {
@@ -137,7 +183,7 @@ namespace HC.<#= project #>.Application.Query
             <#= model #>IM = model;
         }
 
-        public <#= model #> <#= model #>IM { get; set; }
+        public <#= model #>IM <#= model #>IM { get; set; }
     }
 }
 <#
@@ -206,7 +252,9 @@ using System;
 using System.Threading.Tasks;
 using FluentValidation;
 using HC.Common;
+using HC.Common.Infrastructure.DomainPersistence;
 using HC.<#= project #>.Application.Models.ViewModel.<#= aggregate #>;
+using HC.<#= project #>.Infrastructure.DomainPersistence.Repository.<#= aggregate #>;
 
 namespace HC.<#= project #>.Application.Query
 {
@@ -298,8 +346,8 @@ namespace HC.<#= project #>.Application.Query
             <#= LowercaseFirst(aggregate) #>Repository.Requires().IsNotNull();
             mappingProcessor.Requires().IsNotNull();
 
-            _<#= aggregate #>Repository = <#= LowercaseFirst(aggregate) #>Repository;
-              _mappingProcessor = mappingProcessor;
+            _<#= LowercaseFirst(aggregate) #>Repository = <#= LowercaseFirst(aggregate) #>Repository;
+            _mappingProcessor = mappingProcessor;
         }
 
         protected override async Task<<#= model #>VM> ExecuteAsync(<#= action #>QRY query)
