@@ -4,10 +4,10 @@
 <#@ import namespace="System.IO" #>
 <#@ output extension=".cs" #>
 <#@ template hostSpecific="true"#>
-<# var project = "Answer"; #>
-<# var action = "ParticipantAnswer" ; #>
-<# var numberSteps = 3 ; #>
-<# var aggregate = "Answer" ; #>
+<# var project = "Swatson"; #>
+<# var action = "AddSectorToTouchpoint" ; #>
+<# var numberSteps = 2 ; #>
+<# var aggregate = "Touchpoint" ; #>
 <# for (int i = 1; i < numberSteps + 1; i++)  { #>
 using HC.Common;
 using System;

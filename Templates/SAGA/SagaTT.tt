@@ -4,9 +4,9 @@
 <#@ import namespace="System.IO" #>
 <#@ output extension=".cs" #>
 <#@ template hostSpecific="true"#>
-<# var project = "Answer"; #>
-<# var action = "ParticipantAnswer" ; #>
-<# var numberSteps = 3 ; #>
+<# var project = "Swatson"; #>
+<# var action = "AddSectorToTouchpoint" ; #>
+<# var numberSteps = 2 ; #>
 using System;
 using System.Threading.Tasks;
 using HC.<#= project #>.Application.Command;
@@ -210,7 +210,9 @@ namespace HC.<#= project #>.Processor
             return new <#= action + i.ToString() #>RM(
                tenantUniqueId: command.TenantUniqueId,
                correlationUniqueId: command.CorrelationUniqueId,
-               userUniqueId: command.UserUniqueId          
+               userUniqueId: command.UserUniqueId,
+               uniqueId: command.UniqueId
+               
             );
         }
 <# } #>  
@@ -221,7 +223,8 @@ namespace HC.<#= project #>.Processor
             return new <#= action + i.ToString() #>CMD(
                 tenantUniqueId: message.TenantUniqueId,
                 correlationUniqueId: message.CorrelationUniqueId,
-                userUniqueId: message.UserUniqueId             
+                userUniqueId: message.UserUniqueId,
+                uniqueId: message.UniqueId
             );
         }
 <# } #>  
