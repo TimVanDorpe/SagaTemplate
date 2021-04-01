@@ -4,9 +4,10 @@
 <#@ import namespace="System.IO" #>
 <#@ output extension=".cs" #>
 <#@ template hostSpecific="true"#>
-<# var project = "Swatson"; #>
-<# var action = "AddSectorToTouchpoint" ; #>
-<# var aggregate = "Touchpoint" ; #>
+<# var project = "ImportExport"; #>
+<# var action = "FtpRegeneratePassword" ; #>
+<# var controllerName = "Ftp" ; #>
+<# var aggregate = "Tenant" ; #>
 <# var datatype = new string [] { "UniqueId", "UniqueId"  }; #>
 <# var properties = new string [] { "TouchpointUniqueId", "SectorUniqueId"}; #>
 using HC.Common;
@@ -43,7 +44,7 @@ using HC.Common;
 using FluentValidation;
 using FluentValidation.Results;
 using System;
-using HC.<#= project #>.Infrastructure.DomainPersistence.Repository.<#= aggregate #>;
+using HC.<#= project #>.Infrastructure.DomainPersistence.Repository;
 using HC.<#= project #>.Application.Command;
 
 namespace HC.<#= project #>.Application.Command
@@ -62,11 +63,7 @@ namespace HC.<#= project #>.Application.Command
             Condition.Requires(repository, nameof(repository)).IsNotNull();
             this.repository = repository;
 
-            // Validation rules       
-            RuleFor(x => x.UniqueId.Value)
-                .NotNull()
-                .NotEqual(new Guid());
-
+            // Validation rules 
             RuleFor(x => x.TenantUniqueId)
                 .NotNull()
                 .NotEqual(new Guid());
@@ -138,8 +135,9 @@ using System.Text;
 using System.Threading.Tasks;
 using HC.Common;
 using HC.Common.Infrastructure.DomainPersistence;
+using HC.Common.Infrastructure.RedisCache;
 using HC.<#= project #>.Domain.Aggregate.<#= aggregate #>;
-using HC.<#= project #>.Infrastructure.DomainPersistence.Repository.<#= aggregate #>;
+using HC.<#= project #>.Infrastructure.DomainPersistence.Repository;
 
 namespace HC.<#= project #>.Application.Command
 {
@@ -147,8 +145,13 @@ namespace HC.<#= project #>.Application.Command
     {
         private readonly <#= aggregate #>Repository _repository;
 
-        public <#= action #>CH(<#= aggregate #>Repository repository)
-            : base(repository)
+        public <#= action #>CH(<#= aggregate #>Repository repository,
+          ILogger logger,
+          NServiceBusPublisher nsbPublisher,
+          InMemoryDomainEventPublisher domainEventPublisher,
+          IRedisCacheManager cacheManager
+        )
+            : base(repository, logger, nsbPublisher, domainEventPublisher, cacheManager)
         {
             this._repository = repository;
         }
@@ -188,21 +191,17 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using HC.Common;
+using HC.Common.UnitTesting;
 using HC.Common.Infrastructure.DomainPersistence;
-using HC.<#= project #>.Application.Models.InputModel.<#= aggregate #>;
-using HC.<#= project #>.Infrastructure.DomainPersistence.Repository.<#= aggregate #>;
+using HC.<#= project #>.Application.Models.InputModel;
+using HC.<#= project #>.Infrastructure.DomainPersistence.Repository;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace HC.<#= project #>.Application.UnitTests.<#= aggregate #>
 {
-    public class <#= action #>
-    {
-        static <#= action #>()
-        {
-            if (Startup.IocConfig == null)
-                Startup.IocConfig = Startup.Init();
-        }
+    public class <#= action #> : TestFixture<Startup>
+    {      
 
         private readonly ITestOutputHelper output;       
 
@@ -214,8 +213,8 @@ namespace HC.<#= project #>.Application.UnitTests.<#= aggregate #>
         public async Task <#= action #>_ShouldReturnIsValidResult()
         {
             // Arrange
-            var <#= aggregate.ToLower() #>AS = ObjectContainer.Resolve<<#= aggregate #>AS>();
-            var <#= aggregate.ToLower() #>Rep = ObjectContainer.Resolve<<#= aggregate #>Repository>();           
+            var <#= ToLowerCase(controllerName) #>AS = Scope.Resolve<<#= controllerName #>AS>();
+            var <#= aggregate.ToLower() #>Rep = Scope.Resolve<<#= aggregate #>Repository>();           
             var tenantUniqueId = Guid.Parse("");
 
             var model = new <#= action #>IM()
@@ -227,7 +226,7 @@ namespace HC.<#= project #>.Application.UnitTests.<#= aggregate #>
 <# } #>
             };
             // Act
-            var result = await <#= aggregate.ToLower() #>AS.<#= action #>Async(Guid.NewGuid(), model);
+            var result = await <#= ToLowerCase(controllerName) #>AS.<#= action #>(Guid.NewGuid(), model);
 
             // Assert
             Assert.True(result.IsValid);
@@ -243,34 +242,23 @@ using System;
 using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
-using HC.<#= project #>.Application.Models.InputModel.<#= aggregate #>;
-using HC.<#= project #>.Infrastructure.DomainPersistence.Repository.<#= aggregate #>;
+
+using HC.<#= project #>.Application.Models.InputModel;
+using HC.<#= project #>.Infrastructure.DomainPersistence.Repository;
 using Xunit;
+using HC.Common.UnitTesting;
 using Xunit.Abstractions;
-namespace HC.<#= project #>.Application.IntegrationTests.<#= aggregate #>
+namespace HC.<#= project #>.Application.IntegrationTests
 {
-    public class <#= action #>_IntTest
-    {
-        static <#= action #>_IntTest()
-        {
-            if (Startup.IocConfig == null)
-                Startup.IocConfig = Startup.Init();
-        }
-
-        private readonly ITestOutputHelper output;
-
-        public <#= action #>_IntTest(ITestOutputHelper output)
-        {
-            this.output = output;
-        }
-        
+    public class <#= action #>_IntTest : TestFixture<Startup>
+    {   
 
         [Fact(Skip = "only manual")]
         //[Fact]
         public async Task <#= action #>_ShouldBeValid()
         {
             // Arrange
-            var <#= aggregate.ToLower() #>As = ObjectContainer.Resolve<<#= aggregate #>AS>();            
+            var <#= ToLowerCase(controllerName) #>As = Scope.Resolve<<#= controllerName #>AS>();            
 
             var userId = Guid.Parse("88B79954-98E6-48F6-B350-ACE49D98130C");
             var tenantId = Guid.Parse("");
@@ -283,7 +271,7 @@ namespace HC.<#= project #>.Application.IntegrationTests.<#= aggregate #>
              CorrelationUniqueId = Guid.NewGuid(),           
              TenantUniqueId = tenantId
             };
-            var result = await <#= aggregate.ToLower() #>As.<#= action #>Async(userId, model);
+            var result = await <#= ToLowerCase(controllerName) #>As.<#= action #>(userId, model);
 
             // Assert
             Assert.True(result.IsValid);
@@ -300,15 +288,15 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace HC.<#= project #>.Application.Models.InputModel.<#= aggregate #>
+namespace HC.<#= project #>.Application.Models.InputModel
 {
     [Serializable]
-    public class AddSectorToTouchpointIM : IInputModel
+    public class <#= action #>IM : IInputModel
     {
         public Guid CorrelationUniqueId { get; set; }
         public Guid TenantUniqueId { get; set; }
 <# for (int i = 0; i < properties.Length; i++)  { #>
-		public <#= (datatype[i] #> <#= properties[i] #> { get; set; }
+		public <#= datatype[i] #> <#= properties[i] #> { get; set; }
 <# } #>       
     }
 }
@@ -319,6 +307,115 @@ namespace HC.<#= project #>.Application.Models.InputModel.<#= aggregate #>
   SaveOutput(action + "IM.cs");
   
   #>
+using HC.Common.Presentation.Logging;
+using Microsoft.AspNetCore.Mvc;
+using HC.Common.Presentation.Security;
+using HC.Common;
+using System.Threading.Tasks;
+using System;
+using HC.<#= project #>.Application;
+using HC.<#= project #>.Application.Models.InputModel;
+
+namespace HC.<#= project #>.Api.Areas.API.Controllers
+{
+    [Route("V4.0/{cultureInfo:length(2):alpha}/tenant")]
+    public class <#= controllerName #>Controller : BaseController
+    {
+        private readonly <#= controllerName #>AS _<#= ToLowerCase(controllerName) #>AS;
+
+        public <#= controllerName #>Controller(
+            <#= controllerName #>AS <#= ToLowerCase(controllerName) #>AS,
+            GeneralExceptionHandling exception,
+            ICrudLogger logger,
+            ApiMembership membership)
+            : base(exception, logger, membership)
+        {
+            _<#= ToLowerCase(controllerName) #>AS = <#= ToLowerCase(controllerName) #>AS;
+        }
+
+        [ProducesResponseType(statusCode: 200)]
+        [ProducesResponseType(statusCode: 400, type: typeof(ValidationError[]))]
+        [HttpPost("<#= action #>")]
+        public async Task<IActionResult> <#= action #>(
+            [FromRoute] string cultureInfo,
+            [FromBody] <#= action #>IM model
+            )
+        {
+            // Generate CorrelationUniqueId
+            model.CorrelationUniqueId = Guid.NewGuid();
+
+            // Handle possible exceptions
+            return await this.Exception.HandleForLoggingAsync(model.CorrelationUniqueId, async () =>
+            {
+                 // Log request
+                var sw = Log.Request(Request, UniqueId.CreateIfNotNull(this.Membership.GetToken().User.Id), UniqueId.CreateIfNotNull(model.CorrelationUniqueId), model);
+
+                // Handle request
+                var result = await this._<#= ToLowerCase(controllerName) #>AS.<#= action #>(this.Membership.GetToken().User.Id, model);
+
+                // Return response
+                if (result.IsValid)
+                    return Ok();
+                else
+                    return BadRequest(result.Errors);
+            });
+        }
+    }
+}
+ <#
+  // End of file.
+  SaveOutput(controllerName + "Controller.cs");
+  
+  #>
+using HC.Common;
+using HC.<#= project #>.Application.Command;
+using HC.<#= project #>.Application.Models.InputModel;
+using HC.<#= project #>.Application.Models.ViewModel;
+using HC.<#= project #>.Application.Query;
+using HC.Integration.Domain.ValueObjects;
+using System;
+using System.Threading.Tasks;
+
+namespace HC.<#= project #>.Application
+{
+    public class <#= controllerName #>AS
+    {
+        private readonly ICommandProcessor<<#= action #>CMD> _<#= ToLowerCase(action) #>Processor;       
+
+        public <#= controllerName #>AS(
+            ICommandProcessor<<#= action #>CMD> <#= ToLowerCase(action) #>Processor,
+          )
+        {
+            _<#= ToLowerCase(action) #>Processor = <#= ToLowerCase(action) #>Processor;           
+        }
+
+        public async Task<Result> <#= action #>(Guid userUniqueId , <#= action #>IM model)
+        {
+            // Init command processor with query + parameters
+            var command =
+                new <#= action #>CMD(
+                    model.TenantUniqueId,
+                    model.CorrelationUniqueId,
+                    userUniqueId,
+                    <# for (int i = 0; i < properties.Length; i++)  { #>            
+            <#= datatype[i] #> <#= ToLowerCase(properties[i]) #><# if( i != properties.Length - 1) {#>, <# } #>
+<#}#>);
+            // Validate the command
+            var result = await _<#= ToLowerCase(action) #>Processor.ValidateAsync(command);
+
+            // If the validation of the command was succesfull
+            if (result.IsValid)
+                // Process the command from the persistence
+                await _<#= ToLowerCase(action) #>Processor.ProcessAsync(command);
+            return result;
+        }      
+    }
+}
+ <#
+  // End of file.
+  SaveOutput(controllerName + "AS.cs");  
+  #>
+
 <#+
 private void SaveOutput(string outputFileName) {
   string templateDirectory = Path.GetDirectoryName(Host.TemplateFile);

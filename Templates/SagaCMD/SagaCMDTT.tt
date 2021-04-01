@@ -4,10 +4,10 @@
 <#@ import namespace="System.IO" #>
 <#@ output extension=".cs" #>
 <#@ template hostSpecific="true"#>
-<# var project = "Swatson"; #>
-<# var action = "AddSectorToTouchpoint" ; #>
-<# var numberSteps = 2 ; #>
-<# var aggregate = "Touchpoint" ; #>
+<# var project = "ImportExport"; #>
+<# var action = "SaveFtpConnector" ; #>
+<# var numberSteps = 3 ; #>
+<# var aggregate = "Tenant" ; #>
 <# for (int i = 1; i < numberSteps + 1; i++)  { #>
 using HC.Common;
 using System;
@@ -20,17 +20,13 @@ namespace HC.<#= project #>.Processor.Saga.Command
         public <#= action + i.ToString() #>CMD(
             Guid tenantUniqueId,
             Guid correlationUniqueId,
-            Guid userUniqueId,
-            UniqueId uniqueId           
+            Guid userUniqueId                 
             )
             : base(tenantUniqueId, correlationUniqueId, userUniqueId)
-        {
-            this.UniqueId = uniqueId;           
-        }
-        public UniqueId UniqueId { get; set; }     
+        {                    
+        }       
     }
-}
-      
+}      
 <#  // End of file.
   SaveOutput(action + i.ToString() + "CMD.cs");
   #>     
@@ -47,14 +43,20 @@ namespace HC.<#= project #>.Processor.Saga.Command
 {
     public class <#= action + i.ToString() #>CH : NsbMessageHandler<<#= action + i.ToString() #>CMD, <#= aggregate #>AR>
     {       
+        private readonly <#= aggregate #>Repository _repository;
 
         public <#= action + i.ToString() #>CH(
-            <#= aggregate #>Repository repository         
+            <#= aggregate #>Repository repository,       
+            AppSettings appSettings, IProcessLogger logger, 
+            NServiceBusPublisher nsbPublisher, IRedisCacheManager cacheManager
             )
-             : base(repository)
+             : base(appSettings, logger, nsbPublisher, cacheManager,repository)
         {
             // Conditions
             Condition.Requires(repository).IsNotNull();
+
+            //Init
+            _repository = repository;
         }
 
         public override async Task ExecuteAsync(<#= action + i.ToString() #>CMD command, IMessageHandlerContext context)
@@ -104,19 +106,20 @@ namespace HC.<#= project #>.Processor.Saga.Command
 {
     public class <#= action + i.ToString() #>CV : NsbMessageValidator<<#= action + i.ToString() #>CMD>
     {
-        private readonly <#= aggregate #>Repository repository;
+        private readonly <#= aggregate #>Repository _repository;
 
         public <#= action + i.ToString() #>CV(
             IProcessLogger logger,
-            <#= aggregate #>Repository repository
+            <#= aggregate #>Repository repository,
+             AppSettings appSettings
             )
-            :base(logger)
+            :base(logger , appSettings)
         {
             // Conditions
             Condition.Requires(repository, nameof(repository)).IsNotNull();
 
             // Init
-            this.repository = repository;
+            _repository = repository;
 
             // Validation rules     
             RuleFor(x => x.TenantUniqueId)
@@ -148,6 +151,16 @@ namespace HC.<#= project #>.Processor.Saga.Command
             {
                 // Log line
                 this.Log.Debug("Fluent validation results are valid",  message.CorrelationUniqueId.ToUniqueId());
+
+                 // Check if the unique id isn't in the persistence yet
+                if (await _repository.ExistsAsync(message.TenantUniqueId.ToTenantUniqueId(), UniqueId.Create(message.UniqueId)))
+                {
+                    // Log line
+                    Log.ValidationError("<#= aggregate #> already exist in the persistence.", message.CorrelationUniqueId.ToUniqueId());
+
+                    // Add property failure to result object
+                    result.AddPropertyFailure(new ValidationFailure("uniqueId", "<#= aggregate #> already exist in the persistence"));
+                }
             }
             else
             {
@@ -192,32 +205,19 @@ using Xunit.Abstractions;
 
 namespace HC.<#= project #>.Processor.UnitTests
 {
-    public class <#= action #>E2ETests
-    {
-        static <#= action #>E2ETests()
-        {
-            if (Startup.IocConfig == null)
-                Startup.IocConfig = Startup.Init();
-        }
-
-        private readonly ITestOutputHelper output;
-
-        public <#= action #>E2ETests(ITestOutputHelper output)
-        {
-            this.output = output;
-        }
-
+    public class <#= action #>E2ETests : TestFixture<Startup>
+    {    
         [Fact]
         public void <#= action #>_ShouldComplete()
         {
             // Arrange
-            var appSettings = ObjectContainer.Resolve<AppSettings>();
+            var appSettings = Scope.Resolve<AppSettings>();
+            var tenantUniqueId = Guid.Parse("");
 
             var command = new <#= action #>CMD(
-               tenantUniqueId: Guid.Parse("424242D0-C217-4D75-81C0-D9A99439E416"),
+               tenantUniqueId: tenantUniqueId,
                correlationUniqueId: Guid.NewGuid(),
-               userUniqueId: Guid.NewGuid(),             
-               uniqueId: UniqueId.Generate()
+               userUniqueId: Guid.NewGuid() 
                 );
 
             command.__s = command.ToJsonString().ToHmac512Signature(
@@ -239,25 +239,21 @@ namespace HC.<#= project #>.Processor.UnitTests
         public async Task <#= action #>Handlers_ShouldReply()
         {
             // Arrange
-            var appSettings = ObjectContainer.Resolve<AppSettings>();
-            var repository = ObjectContainer.Resolve<<#= aggregate #>Repository>();
-            // TODO : correct tenant
-            var tenantUniqueId = TenantUniqueId.Create("424242D0-C217-4D75-81C0-D9A99439E416");
-            var uniqueId = UniqueId.Generate();
+            var appSettings = Scope.Resolve<AppSettings>();
+            var repository = Scope.Resolve<<#= aggregate #>Repository>();          
+            var tenantUniqueId = TenantUniqueId.Create("");            
             var correlationId = Guid.NewGuid();
             var userId = Guid.NewGuid();
 
          // Act & Assert
 <# for (int i = 1; i < numberSteps + 1; i++)  { #> 
          // <#= action #><#= i #>CMD
-            NServiceBus.Testing.Test.Handler<NsbMessageProcessor<<#= action #><#= i #>CMD, <#= action #><#= i #>CV, <#= action #><#= i #>CH>>()
-                .ExpectReply<<#= action #><#= i #>RM>(message => message.UniqueId == uniqueId)
+            NServiceBus.Testing.Test.Handler(Scope.Resolve<NsbMessageProcessor<<#= action #><#= i #>CMD, <#= action #><#= i #>CV, <#= action #><#= i #>CH>>())             
                 .OnMessage<<#= action #><#= i #>CMD>(m =>
                 {
                     m.TenantUniqueId = tenantUniqueId.Value;
                     m.CorrelationUniqueId = correlationId;
-                    m.UserUniqueId = userId;                  
-                    m.UniqueId = uniqueId;
+                    m.UserUniqueId = userId;  
                     m.__s = m.ToJsonString().ToHmac512Signature(key: appSettings.Security.Signature.Key, salt: appSettings.Security.Signature.Salt);
                 })
                ;

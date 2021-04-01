@@ -1,0 +1,210 @@
+﻿<#@ template debug="false" hostspecific="true" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System" #>
+<#@ import namespace="System.IO" #>
+<#@ output extension=".cs" #>
+<#@ template hostSpecific="true"#>
+<# var datatype = new string [] {"Guid" , "Guid" , "string" , "guid" , "string" , "string" , "int" , "string" , "bool", "int?"  }; #>
+<# var properties = new string [] {"ParticipantUniqueId", "TouchpointUniqueId", "CustomId" , "UnitUniqueId", "PrivateIP", "PublicIP", "CurrentState", "Notes", "IsValid", "ValidationErrorCode"}; #>
+<# var project = "Core"; #>
+<# var aggregate = "ParticipantTransaction" ; #>
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using HC.Common;
+using HC.Common.Infrastructure.DomainPersistence;
+using HC.Common.Infrastructure.DomainPersistence.EF;
+using HC.<#= project #>.Domain.Aggregate.<#= aggregate #>;
+using HC.<#= aggregate #>.Infrastructure.DomainPersistence.Entity;
+namespace HC.<#= aggregate #>.Infrastructure.DomainPersistence.Repository.<#= aggregate #>
+{
+    public class <#= aggregate #>Repository : AggregateEFRepository<<#= aggregate #>AR, <#= aggregate #>PE, <#= aggregate #>DbContext>
+    {
+        public <#= aggregate #>Repository(IAsyncDbContextFactory<<#= aggregate #>DbContext> factory , IContainerLifetimeScope scope)
+            : base(factory, scope)
+        {
+        }
+
+         public <#= aggregate #>Repository(IDbContextFactory<<#= aggregate #>DbContext> factory, IContainerLifetimeScope scope)
+           : base(factory, scope)
+        {
+
+        }
+          protected override IQueryable<<#= aggregate #>PE> PredicateForSoberLoadedAggregate(IQueryable<<#= aggregate #>PE> query)
+        {
+            return query;
+        }
+
+        protected override IQueryable<<#= aggregate #>PE> PredicateForFullyLoadedAggregate(IQueryable<<#= aggregate #>PE> query)
+        {
+            return query;
+        }       
+
+        public async Task<bool> ExistsAsync(TenantUniqueId tenantUniqueId, UniqueId uniqueId)
+        {
+            Condition.Requires(tenantUniqueId, nameof(tenantUniqueId))
+                .IsNotNull();
+            Condition.Requires(uniqueId, nameof(uniqueId))
+                .IsNotNull();
+
+            return await base.AnyAsync(Loading.Sober, tenantUniqueId, f => f.UniqueId == uniqueId.Value);
+        }       
+    }
+}
+<#
+  // End of file.
+  SaveOutput(aggregate + "Repository.cs");
+  #>
+
+using System;
+using HC.Common.Infrastructure.DomainPersistence.EF;
+using NServiceBus.Persistence;
+namespace HC.<#= project #>.Infrastructure.DomainPersistence.Repository.<#= aggregate #>
+{
+    public class <#= aggregate #>NsbUnitOfWork : NsbUnitOfWorkBehavior<<#= aggregate #>DbContext>
+    {
+        public <#= aggregate #>NsbUnitOfWork(Func<SynchronizedStorageSession, <#= aggregate #>DbContext> contextFactory)
+            : base(contextFactory)
+        {
+
+        }
+    }
+}
+<#
+  // End of file.
+  SaveOutput(aggregate + "NsbUnitOfWork.cs");
+  #>
+
+using System.Data.Common;
+using HC.Common.Infrastructure.DomainPersistence;
+using HC.Common.Infrastructure.DomainPersistence.EF;
+using HC.<#= aggregate #>.Infrastructure.DomainPersistence.Entity;
+using Microsoft.EntityFrameworkCore;
+
+namespace HC.<#= aggregate #>.Infrastructure.DomainPersistence.Repository.<#= aggregate #>
+{
+    public class <#= aggregate #>DbContext : PersistenceContext
+    {
+        public <#= aggregate #>DbContext(DbConnection connection, ShardingInterceptor interceptor) : base(connection , interceptor)
+        {
+        }
+
+        public <#= aggregate #>DbContext(DbConnection connection, DbContextOptions options, ShardingInterceptor interceptor) : base(connection, options , interceptor)
+        {
+        }
+
+        // ONLY USE THIS CONSTRUCTOR FOR TEST PURPOSE !!
+        public <#= aggregate #>DbContext(DbContextOptions options , ShardingInterceptor interceptor)
+            : base(null, options , interceptor)
+        {
+
+        }
+        public virtual DbSet<DomainEventStreamPE> DomainEventStream { get; set; }
+        public virtual DbSet<ActivityLogPE> ActivityLogs { get; set; }
+        public virtual DbSet<<#= aggregate #>PE> <#= aggregate #>s { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder
+                .ApplyConfiguration(new TrackedEntityConfiguration<DomainEventStreamPE>())
+                .ApplyConfiguration(new TrackedEntityConfiguration<ActivityLogPE>())
+                .ApplyConfiguration(new AggregateConfiguration<<#= aggregate #>PE>())
+
+
+                // MAPPER
+                .ConfigurateAndMapDomainEventStream()               
+                .Entity<<#= aggregate #>PE>(x =>
+                {
+				 x.ToTable("<#= aggregate #>", "dbo");
+<# for (int i = 0; i < properties.Length; i++){ #>
+					x.Property(p => p.<#= properties[i] #>)
+					.IsRequired()
+					.HasColumnType("nvarchar(256)");
+					//TODO :  refactor DB type above (nvarchar(256))
+<# } #>                               
+                })
+                ;
+        }
+    }
+}
+<#
+  // End of file.
+  SaveOutput(aggregate + "DbContext.cs");
+  #>
+
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Threading.Tasks;
+using HC.Common;
+using HC.Common.Infrastructure.DomainPersistence;
+using HC.Integration.Domain.ValueObjects;
+using HC.<#= project #>.Domain.Aggregate.<#= aggregate #>;
+
+namespace HC.<#= project #>.Infrastructure.DomainPersistence.Entity
+{
+    public class <#= aggregate #>PE : TenantPersistenceEntity, IPersistenceEntityAggregateConvertible<<#= aggregate #>PE, <#= aggregate #>AR>
+    {
+<# for (int i = 0; i < properties.Length; i++)  { #>
+		public <#= datatype[i] + " " + properties[i] #> { get; set; }
+<# } #>       
+        
+        public Action<<#= aggregate #>PE> MapFromAggregate(<#= aggregate #>AR aggregate)
+        {
+            return p =>
+            {                
+                p.State = aggregate.State;
+                p.TenantUniqueId = aggregate.TenantUniqueId.Value;
+                p.UniqueId = aggregate.UniqueId.Value;
+                p.Version = aggregate.Version;
+<# for (int i = 0; i < properties.Length; i++)  { #>
+				p.<#= properties[i] #> = aggregate.<#= properties[i] #>;
+<# } #>                
+            };
+        }
+
+        public Task<<#= aggregate #>AR> MapToAggregate(Loading type)
+        {
+            var <#= aggregate #> = new <#= aggregate #>AR(
+                tenantUniqueId: this.TenantUniqueId.ToTenantUniqueId()
+<# for (int i = 0; i < properties.Length; i++)  { #>
+				,this.<#= properties[i] #>
+<# } #>
+                ,uniqueId: Common.UniqueId.Create(this.UniqueId)
+                ,state: type == Loading.Full
+                    ? PersistenceState.FullyLoadedFromPersistence
+                    : PersistenceState.SoberLoadedFromPersistence, 
+                version: this.Version);
+
+            // Mark as unchanged and return back to sender
+            return Task.FromResult(<#= aggregate #>.Persistence_MarkAsUnchanged());
+        }
+    }
+
+}
+<#
+  // End of file.
+  SaveOutput(aggregate + "PE.cs");
+  #>
+<#+
+private void SaveOutput(string outputFileName) {
+  string templateDirectory = Path.GetDirectoryName(Host.TemplateFile);
+  string outputFilePath = Path.Combine(templateDirectory, outputFileName);
+  File.WriteAllText(outputFilePath, this.GenerationEnvironment.ToString()); 
+  this.GenerationEnvironment.Remove(0, this.GenerationEnvironment.Length);
+}
+#>
+<#+
+
+     public string ToCamelCase(string str)
+     {                    
+         if(!string.IsNullOrEmpty(str) && str.Length > 1)
+         {
+             return Char.ToLowerInvariant(str[0]) + str.Substring(1);
+         }
+         return str;
+     }
+ 
+#>

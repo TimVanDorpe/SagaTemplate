@@ -4,12 +4,12 @@
 <#@ import namespace="System.IO" #>
 <#@ output extension=".cs" #>
 <#@ template hostSpecific="true"#>
-<# var datatype = new string [] {}; #>
-<# var properties = new string [] {}; #>
+<# var datatype = new string [] {"Guid"}; #>
+<# var properties = new string [] {"AttributeTypeKeyUniqueId"}; #>
 <# var project = "Core"; #>
-<# var aggregate = "ParticipantAttributeTypeKey" ; #>
-<# var action = "ParticipantAttributeTypeKeyGetAll" ; #>
-<# var model = "ParticipantAttributeTypeKey" ; #>
+<# var aggregate = "ParticipantAttributeTypeValue" ; #>
+<# var action = "ParticipantAttributeTypeValueGetByKey" ; #>
+<# var model = "ParticipantAttributeTypeValue" ; #>
 using HC.Common.UnitTesting;
 using HC.<#= project #>.Infrastructure.DomainPersistence.Repository.<#= aggregate #>;
 using HC.<#= project #>.Test.Setup.Builders;
@@ -71,7 +71,7 @@ namespace HC.<#= project #>.Application.IntegrationTests.<#= aggregate #>
             var userId = Guid.Parse("88B79954-98E6-48F6-B350-ACE49D98130C");
             var tenantId = Guid.Parse("17DBC831-4CF2-4BD1-B0B3-09E17D605291");
 
-            var result = await service.<#= action #>(tenantId, Guid.NewGuid(), userId);
+            var result = await service.<#= action #>( Guid.NewGuid(), tenantId, userId);
 
             // Assert
             Assert.True(result.IsValid);
@@ -115,11 +115,12 @@ namespace HC.<#= project #>.Api.Areas.API.Controllers
 
 		[ProducesResponseType(statusCode: 200, type: typeof(<#= model #>VM))]
         [ProducesResponseType(statusCode: 400, type: typeof(ValidationError[]))]
-        [HttpGet("<#= action #>")]
+        [HttpGet("<#= action #>/{uniqueId:Guid}")]
         public async Task<IActionResult> <#= action #>(
             [FromRoute] string cultureInfo,
             [FromRoute] Guid tenantUniqueId,
-            [FromRoute] <#= model #> <#= model #>IM
+            [FromRoute] Guid uniqueId
+           
         )
         {
             // Generate query id
@@ -136,7 +137,8 @@ namespace HC.<#= project #>.Api.Areas.API.Controllers
                 var result = await <#= LowercaseFirst(aggregate) #>AS.<#= action #>(this.Membership.GetToken().User.Id,
                     tenantUniqueId,
                     queryUniqueId.Value,
-                    <#= model #>IM);
+                    uniqueId
+                    );
 
                 // Log response
                 Log.Response(Request, sw, queryUniqueId, result);
@@ -173,7 +175,7 @@ namespace HC.Core.Application
             _<#= LowercaseFirst(action) #>Processor = <#= LowercaseFirst(action) #>Processor;
         }
 
-public async Task<Result<<#= model #>VM>> <#= action #>(Guid userUniqueId, Guid tenantUniqueId, Guid correlationUniqueId, <#= model #>IM model)
+public async Task<Result<<#= model #>VM>> <#= action #>(Guid userUniqueId, Guid tenantUniqueId, Guid correlationUniqueId, Guid uniqueId)
         {
             // Init query processor with query + parameters
             var query = (
@@ -181,7 +183,7 @@ public async Task<Result<<#= model #>VM>> <#= action #>(Guid userUniqueId, Guid 
                     tenantUniqueId: tenantUniqueId,
                     correlationUniqueId: correlationUniqueId,
                     userUniqueId: userUniqueId,
-                    model
+                    uniqueId
                 ));
 
             // Validate the query
@@ -212,14 +214,22 @@ namespace HC.<#= project #>.Application.Query
             Guid tenantUniqueId, 
             Guid correlationUniqueId, 
             Guid userUniqueId,
-            <#= model #>IM model
+<# for (int i = 0; i < properties.Length; i++){ #>            
+            <#= datatype[i] + " " + properties[i].ToLower() #><# if(i != properties.Length - 1) {#>,<# } #>
+<# } #> 
+            
             ) 
             : base(tenantUniqueId, correlationUniqueId, userUniqueId)
         {
-            <#= model #>IM = model;
+<# for (int i = 0; i < properties.Length; i++)  { #>
+		    this.<#= properties[i] #> = <#= properties[i].ToLower() #>;
+<# } #>
+            
         }
-
-        public <#= model #>IM <#= model #>IM { get; set; }
+<# for (int i = 0; i < properties.Length; i++)  { #>
+		public <#= datatype[i] + " " + properties[i] #>{ get; set;} 
+<# } #>
+     
     }
 }
 <#

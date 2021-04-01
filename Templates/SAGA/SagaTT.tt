@@ -4,9 +4,11 @@
 <#@ import namespace="System.IO" #>
 <#@ output extension=".cs" #>
 <#@ template hostSpecific="true"#>
-<# var project = "Swatson"; #>
-<# var action = "AddSectorToTouchpoint" ; #>
-<# var numberSteps = 2 ; #>
+<# var project = "ImportExport"; #>
+<# var action = "SaveFtpConnector" ; #>
+<# var triggerCMD = "SaveFtpConnectorCMD" ; #>
+<# var numberSteps = 3 ; #>
+<# var aggregate = "Tenant" ; #>
 using System;
 using System.Threading.Tasks;
 using HC.<#= project #>.Application.Command;
@@ -21,42 +23,26 @@ namespace HC.<#= project #>.Processor.Saga
 {
     public class <#= action #>SAGA :
         Saga<<#= action #>SD>, 
-        IAmStartedByMessages<<#= action #>CMD>,
+        IAmStartedByMessages<<#= triggerCMD #>>,
 <# for (int i = 1; i < numberSteps + 1; i++)  { #>
 		 IHandleMessages<<#= action + i.ToString() #>RM> <# if(numberSteps != i){ #>,<#}#>        
 <# } #>        
     {
-        private readonly IProcessLogger Log;
-        private readonly AppSettings AppSettings;
+        private readonly IProcessLogger _logger;
+        private readonly AppSettings _appSettings;
 
-        // In order to test the SAGA, the constructor can't contain any parameter. See https://docs.particular.net/nservicebus/testing/fluent 
-        // for more information about this topic.
-        public <#= action #>SAGA()
+        public <#= action #>SAGA(IProcessLogger logger, AppSettings appSettings)
         {
-            // Init
-            this.Log = ObjectContainer.Resolve<IProcessLogger>();
-            this.AppSettings = ObjectContainer.Resolve<AppSettings>();
-
-            // Conditions
-            Condition.Requires(this.Log, nameof(this.Log)).IsNotNull();
-            Condition.Requires(this.AppSettings, nameof(this.AppSettings)).IsNotNull();
-        }
-
-        public <#= action #>SAGA(
-            IProcessLogger logger,
-            AppSettings appSettings
-            )
-        {
-            // Conditions
-            Condition.Requires(logger, nameof(logger)).IsNotNull();
-            Condition.Requires(appSettings, nameof(appSettings)).IsNotNull();
+          // Conditions
+            logger.Requires().IsNotNull();
+            appSettings.Requires().IsNotNull();
 
             // Init
-            this.Log = logger;
-            this.AppSettings = appSettings;
-        }
+            _logger = logger;
+            _appSettings = appSettings;
+        }        
 
-          public async Task Handle(<#= action #>CMD command, IMessageHandlerContext context)
+          public async Task Handle(<#= triggerCMD #> command, IMessageHandlerContext context)
         {
             // Conditions
             context.Requires(nameof(context)).IsNotNull();
@@ -78,7 +64,7 @@ namespace HC.<#= project #>.Processor.Saga
             this.Data.Identifier = command.CorrelationUniqueId;
             
 
-            // Send CreateAUser1CMD on the context 
+            // Send <#= action #>CMD on the context 
             await context.SendCommandAsync(command.MapToCommand() , this.AppSettings.Security.Signature.Key, this.AppSettings.Security.Signature.Salt);
 
             // Set as complete
@@ -116,7 +102,7 @@ namespace HC.<#= project #>.Processor.Saga
 
    protected override void ConfigureHowToFindSaga(SagaPropertyMapper<<#= action #>SD> mapper)
         {
-            mapper.ConfigureMapping<<#= action #>CMD>(cmd => cmd.CorrelationUniqueId)
+            mapper.ConfigureMapping<<#= triggerCMD #>>(cmd => cmd.CorrelationUniqueId)
                .ToSaga(sd => sd.Identifier);
 <# for (int i = 1; i < numberSteps + 1; i++)  { #>	
             mapper.ConfigureMapping<<#= action + i.ToString()#>RM>(cmd => cmd.CorrelationUniqueId)
@@ -141,7 +127,7 @@ namespace HC.<#= project #>.Processor.Saga
     {
         public <#= action #>SS State { get; set; }
         public Guid Identifier { get; set; }
-        public <#= action #>CMD Command { get; set; }
+        public <#= triggerCMD #> Command { get; set; }
 
     }
 }
@@ -155,7 +141,7 @@ namespace HC.<#= project #>.Processor.Saga.State
     {
         Start,
 <# for (int i = 1; i < numberSteps + 1; i++)  { #>
-        Step<#= i #>Done,
+        Step<#= i.ToString() #>Done,
 <# } #>     
     }
 
@@ -181,15 +167,12 @@ namespace HC.<#= project #>.Processor.Saga.ReplyMessage
         public <#= action + i.ToString() #>RM(
             Guid tenantUniqueId,
             Guid correlationUniqueId,
-            Guid userUniqueId,
-            UniqueId uniqueId
+            Guid userUniqueId            
             )
             :base(tenantUniqueId, correlationUniqueId, userUniqueId)
         {
-            this.UniqueId = uniqueId;
-        }
-
-        public UniqueId UniqueId { get; set; }
+            
+        }        
     }
 }
 <#
@@ -204,39 +187,55 @@ namespace HC.<#= project #>.Processor
 {
     public static class <#= action #>Mapper
     {
-<# for (int i = 1; i < numberSteps + 1; i++)  { #>
-        public static <#= action + i.ToString() #>RM MapToReplyMessage(this <#= action + i.ToString() #>CMD command)
+      public static <#= triggerCMD #> MapToCommand(this <#= action #>1CMD command)
         {
-            return new <#= action + i.ToString() #>RM(
-               tenantUniqueId: command.TenantUniqueId,
-               correlationUniqueId: command.CorrelationUniqueId,
-               userUniqueId: command.UserUniqueId,
-               uniqueId: command.UniqueId
-               
+            return new <#= action #>1CMD(
+                tenantUniqueId: command.TenantUniqueId,
+                correlationUniqueId: command.CorrelationUniqueId,
+                userUniqueId: command.UserUniqueId                
             );
         }
-<# } #>  
 
-<# for (int i = 1; i < numberSteps + 1; i++)  { #> 
+ <# for (int i = 1; i < numberSteps + 1; i++)  { #> 
         public static <#= action + i.ToString() #>CMD MapToCommand(this <#= action + i.ToString()#>RM message)
         {
             return new <#= action + i.ToString() #>CMD(
                 tenantUniqueId: message.TenantUniqueId,
                 correlationUniqueId: message.CorrelationUniqueId,
-                userUniqueId: message.UserUniqueId,
-                uniqueId: message.UniqueId
+                userUniqueId: message.UserUniqueId                
             );
         }
 <# } #>  
+
+<# for (int i = 1; i < numberSteps; i++)  { #>
+        public static <#= action + i.ToString() #>RM MapToReplyMessage(this <#= action + (i + 1).ToString() #>CMD command)
+        {
+            return new <#= action + i.ToString() #>RM(
+               tenantUniqueId: command.TenantUniqueId,
+               correlationUniqueId: command.CorrelationUniqueId,
+               userUniqueId: command.UserUniqueId
+            );
+        }
+<# } #>  
+
      }
 }
 <#
   // End of file.
   SaveOutput(action + "Mapper.cs");
-  #>     
- 
+  #>    
 
+ iocConfig.Builder.RegisterType(typeof(<#= action #>1CH));
+ iocConfig.Builder.RegisterType(typeof(<#= action #>1CV));
 
+<# for (int i = 1; i < numberSteps; i++)  { #>
+typeof(NsbMessageProcessor<<#= action + i.ToString() #>CMD, <#= action + i.ToString() #>CV, <#= action + i.ToString() #>CH>),
+<# } #>  
+
+  <#
+  // End of file.
+  SaveOutput(action + "ioc.cs");
+  #>    
 <#+
 private void SaveOutput(string outputFileName) {
   string templateDirectory = Path.GetDirectoryName(Host.TemplateFile);
