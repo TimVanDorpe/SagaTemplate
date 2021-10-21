@@ -5,11 +5,11 @@
 <#@ output extension=".cs" #>
 <#@ template hostSpecific="true"#>
 <# var datatype = new string [] {"Guid"}; #>
-<# var properties = new string [] {"AttributeTypeKeyUniqueId"}; #>
-<# var project = "Core"; #>
-<# var aggregate = "ParticipantAttributeTypeValue" ; #>
-<# var action = "ParticipantAttributeTypeValueGetByKey" ; #>
-<# var model = "ParticipantAttributeTypeValue" ; #>
+<# var properties = new string [] { "UniqueId" }; #>
+<# var project = "ImportExport"; #>
+<# var aggregate = "FileImportSettings" ; #>
+<# var action = "GetFileImportSettings" ; #>
+<# var model = "FileImportSettings" ; #>
 using HC.Common.UnitTesting;
 using HC.<#= project #>.Infrastructure.DomainPersistence.Repository.<#= aggregate #>;
 using HC.<#= project #>.Test.Setup.Builders;
@@ -19,7 +19,7 @@ using Xunit;
 using HC.Common.UnitTesting.Builders;
 using System.Threading.Tasks;
 
-namespace HC.<#= project #>.Application.UnitTests.<#= aggregate #>
+namespace HC.<#= project #>.Application.UnitTests
 {
     public class <#= action #>Tests : TestFixture<Startup>
     {            
@@ -49,17 +49,10 @@ using Xunit;
 using Xunit.Abstractions;
 using HC.Common.UnitTesting;
 
-namespace HC.<#= project #>.Application.IntegrationTests.<#= aggregate #>
+namespace HC.<#= project #>.Application.IntegrationTests
 {
     public class <#= action #>Tests : TestFixture<Startup>
-    {
-
-        private readonly ITestOutputHelper output;
-
-        public <#= action #>Tests(ITestOutputHelper output)
-        {
-            this.output = output;
-        }
+    {      
 
         [Fact(Skip = "only manual")]
         //[Fact]
@@ -87,7 +80,7 @@ namespace HC.<#= project #>.Application.IntegrationTests.<#= aggregate #>
 using HC.Common.Presentation.Logging;
 using HC.Common.Presentation.Security;
 using HC.<#= project #>.Application;
-using HC.<#= project #>.Application.Models.ViewModel.<#= model #>;
+using HC.<#= project #>.Application.Models.ViewModel;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
@@ -101,7 +94,7 @@ namespace HC.<#= project #>.Api.Areas.API.Controllers
     public class <#= aggregate #>Controller : BaseController
     {
         private readonly <#= aggregate #>AS _<#= LowercaseFirst(aggregate) #>AS;
-         private readonly AppSettings _appSettings;
+        private readonly AppSettings _appSettings;
 
         public <#= aggregate #>Controller(<#= aggregate #>AS <#= LowercaseFirst(aggregate) #>AS, GeneralExceptionHandling exception, ICrudLogger logger, ApiMembership membership , AppSettings appSettings)
             : base(exception, logger, membership)
@@ -119,8 +112,7 @@ namespace HC.<#= project #>.Api.Areas.API.Controllers
         public async Task<IActionResult> <#= action #>(
             [FromRoute] string cultureInfo,
             [FromRoute] Guid tenantUniqueId,
-            [FromRoute] Guid uniqueId
-           
+            [FromRoute] <#= model #>IM model           
         )
         {
             // Generate query id
@@ -137,7 +129,7 @@ namespace HC.<#= project #>.Api.Areas.API.Controllers
                 var result = await <#= LowercaseFirst(aggregate) #>AS.<#= action #>(this.Membership.GetToken().User.Id,
                     tenantUniqueId,
                     queryUniqueId.Value,
-                    uniqueId
+                    model
                     );
 
                 // Log response
@@ -157,8 +149,8 @@ namespace HC.<#= project #>.Api.Areas.API.Controllers
   SaveOutput(aggregate + "Controller.cs");
   #>
 using HC.Common;
-using HC.<#= project #>.Application.Models.ViewModel.<#= model #>;
-using HC.<#= project #>.Application.Models.InputModel.<#= model #>;
+using HC.<#= project #>.Application.Models.ViewModel;
+using HC.<#= project #>.Application.Models.InputModel;
 using HC.<#= project #>.Application.Query;
 using System;
 using System.Collections.Generic;
@@ -175,7 +167,7 @@ namespace HC.Core.Application
             _<#= LowercaseFirst(action) #>Processor = <#= LowercaseFirst(action) #>Processor;
         }
 
-public async Task<Result<<#= model #>VM>> <#= action #>(Guid userUniqueId, Guid tenantUniqueId, Guid correlationUniqueId, Guid uniqueId)
+public async Task<Result<<#= model #>VM>> <#= action #>(Guid userUniqueId, Guid tenantUniqueId, Guid correlationUniqueId, <#= model #>IM model)
         {
             // Init query processor with query + parameters
             var query = (
@@ -183,7 +175,7 @@ public async Task<Result<<#= model #>VM>> <#= action #>(Guid userUniqueId, Guid 
                     tenantUniqueId: tenantUniqueId,
                     correlationUniqueId: correlationUniqueId,
                     userUniqueId: userUniqueId,
-                    uniqueId
+                    model: <#= model #>IM
                 ));
 
             // Validate the query
@@ -204,7 +196,7 @@ public async Task<Result<<#= model #>VM>> <#= action #>(Guid userUniqueId, Guid 
   SaveOutput(aggregate + "AS.cs");
   #>
 using System;
-using HC.<#= project #>.Application.Models.InputModel.<#= model #>;
+using HC.<#= project #>.Application.Models.InputModel;
 
 namespace HC.<#= project #>.Application.Query
 {
@@ -214,22 +206,12 @@ namespace HC.<#= project #>.Application.Query
             Guid tenantUniqueId, 
             Guid correlationUniqueId, 
             Guid userUniqueId,
-<# for (int i = 0; i < properties.Length; i++){ #>            
-            <#= datatype[i] + " " + properties[i].ToLower() #><# if(i != properties.Length - 1) {#>,<# } #>
-<# } #> 
-            
-            ) 
+            <#= model #>IM model) 
             : base(tenantUniqueId, correlationUniqueId, userUniqueId)
         {
-<# for (int i = 0; i < properties.Length; i++)  { #>
-		    this.<#= properties[i] #> = <#= properties[i].ToLower() #>;
-<# } #>
-            
+            Model = model;
         }
-<# for (int i = 0; i < properties.Length; i++)  { #>
-		public <#= datatype[i] + " " + properties[i] #>{ get; set;} 
-<# } #>
-     
+		public <#= model #>IM Model { get; set;}      
     }
 }
 <#
@@ -241,10 +223,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
 using AutoMapper;
-using HC.<#= project #>.Domain.Aggregate.<#= aggregate #>;
+using HC.<#= project #>.Domain.Aggregate;
 using Newtonsoft.Json;
 
-namespace HC.<#= project #>.Application.Models.ViewModel.<#= aggregate #>
+namespace HC.<#= project #>.Application.Models.ViewModel
 {
     public class <#= model #>VM : IViewModel, IObjectMapper
     {
@@ -274,7 +256,7 @@ namespace HC.<#= project #>.Application.Models.ViewModel.<#= aggregate #>
   #>
   using System;
 
-namespace HC.<#= project #>.Application.Models.InputModel.<#= aggregate #>
+namespace HC.<#= project #>.Application.Models.InputModel
 {
     [Serializable]
     public class <#= model #>IM  : IInputModel
@@ -299,7 +281,7 @@ using System.Threading.Tasks;
 using FluentValidation;
 using HC.Common;
 using HC.Common.Infrastructure.DomainPersistence;
-using HC.<#= project #>.Application.Models.ViewModel.<#= aggregate #>;
+using HC.<#= project #>.Application.Models.ViewModel;
 using HC.<#= project #>.Infrastructure.DomainPersistence.Repository.<#= aggregate #>;
 
 namespace HC.<#= project #>.Application.Query
@@ -375,7 +357,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using HC.Common;
 using HC.Common.Infrastructure.DomainPersistence;
-using HC.<#= project #>.Application.Models.ViewModel.<#= aggregate #>;
+using HC.<#= project #>.Application.Models.ViewModel;
 using HC.<#= project #>.Domain.Aggregate.<#= aggregate #>;
 using HC.<#= project #>.Infrastructure.DomainPersistence.Repository.<#= aggregate #>;
 

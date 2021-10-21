@@ -4,12 +4,12 @@
 <#@ import namespace="System.IO" #>
 <#@ output extension=".cs" #>
 <#@ template hostSpecific="true"#>
-<# var project = "ImportExport"; #>
-<# var action = "FtpRegeneratePassword" ; #>
-<# var controllerName = "Ftp" ; #>
-<# var aggregate = "Tenant" ; #>
-<# var datatype = new string [] { "UniqueId", "UniqueId"  }; #>
-<# var properties = new string [] { "TouchpointUniqueId", "SectorUniqueId"}; #>
+<# var project = "Core"; #>
+<# var action = "AddParticipantTransactionBatch" ; #>
+<# var controllerName = "ParticipantTransaction" ; #>
+<# var aggregate = "ParticipantTransaction" ; #>
+<# var datatype = new string [] {"AddParticipantTransactionBatchIM"}; #>
+<# var properties = new string [] { "AddParticipantTransactionBatch"}; #>
 using HC.Common;
 using System;
 
@@ -28,7 +28,7 @@ namespace HC.<#= project #>.Application.Command
             : base(tenantUniqueId, correlationUniqueId, userUniqueId)
         {
 <# for (int i = 0; i < properties.Length; i++)  { #>
-		   this.<#= properties[i] #> = <#= ToLowerCase(properties[i]) #>; 
+		   <#= properties[i] #> = <#= ToLowerCase(properties[i]) #>; 
 <#}#>
         }
 <# for (int i = 0; i < properties.Length; i++)  { #>
@@ -153,7 +153,7 @@ namespace HC.<#= project #>.Application.Command
         )
             : base(repository, logger, nsbPublisher, domainEventPublisher, cacheManager)
         {
-            this._repository = repository;
+            _repository = repository;
         }
 
         protected override async Task ExecuteAsync(<#= action #>CMD command)
@@ -174,7 +174,7 @@ namespace HC.<#= project #>.Application.Command
             // DO STUFF
 
             // Save aggregate to DB
-            await this._repository.SaveAsync(command.CorrelationUniqueId.ToUniqueId(), command.UserUniqueId.ToUniqueId(), aggregate);
+            await _repository.SaveAsync(command.CorrelationUniqueId.ToUniqueId(), command.UserUniqueId.ToUniqueId(), aggregate);
 
             // Log line
             this.Log.Debug("Handling command is done", command.CorrelationUniqueId.ToUniqueId());
@@ -201,14 +201,7 @@ using Xunit.Abstractions;
 namespace HC.<#= project #>.Application.UnitTests.<#= aggregate #>
 {
     public class <#= action #> : TestFixture<Startup>
-    {      
-
-        private readonly ITestOutputHelper output;       
-
-        public <#= action #>(ITestOutputHelper output)
-        {
-            this.output = output;
-        }
+    {            
         [Fact]
         public async Task <#= action #>_ShouldReturnIsValidResult()
         {
@@ -351,7 +344,7 @@ namespace HC.<#= project #>.Api.Areas.API.Controllers
                 var sw = Log.Request(Request, UniqueId.CreateIfNotNull(this.Membership.GetToken().User.Id), UniqueId.CreateIfNotNull(model.CorrelationUniqueId), model);
 
                 // Handle request
-                var result = await this._<#= ToLowerCase(controllerName) #>AS.<#= action #>(this.Membership.GetToken().User.Id, model);
+                var result = await _<#= ToLowerCase(controllerName) #>AS.<#= action #>(this.Membership.GetToken().User.Id, model);
 
                 // Return response
                 if (result.IsValid)
@@ -398,7 +391,7 @@ namespace HC.<#= project #>.Application
                     model.CorrelationUniqueId,
                     userUniqueId,
                     <# for (int i = 0; i < properties.Length; i++)  { #>            
-            <#= datatype[i] #> <#= ToLowerCase(properties[i]) #><# if( i != properties.Length - 1) {#>, <# } #>
+            model.<#= ToLowerCase(properties[i]) #><# if( i != properties.Length - 1) {#>, <# } #>
 <#}#>);
             // Validate the command
             var result = await _<#= ToLowerCase(action) #>Processor.ValidateAsync(command);

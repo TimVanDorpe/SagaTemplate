@@ -38,6 +38,8 @@ using HC.Common.Processor.NSB;
 using NServiceBus;
 using HC.<#= project #>.Domain.Aggregate.<#= aggregate #>;
 using HC.<#= project #>.Infrastructure.DomainPersistence.Repository;
+using HC.Common.Processor.Logging;
+using HC.Common.Infrastructure.RedisCache;
 
 namespace HC.<#= project #>.Processor.Saga.Command
 {
@@ -62,8 +64,7 @@ namespace HC.<#= project #>.Processor.Saga.Command
         public override async Task ExecuteAsync(<#= action + i.ToString() #>CMD command, IMessageHandlerContext context)
         {
             // Conditions
-            command.Requires(nameof(command)).IsNotNull();
-            command.UniqueId.Requires(nameof(command.UniqueId)).IsNotNull();
+            command.Requires(nameof(command)).IsNotNull();            
             command.UserUniqueId.Requires(nameof(command.UserUniqueId)).IsNotEqualTo(new Guid());
             command.TenantUniqueId.Requires(nameof(command.TenantUniqueId)).IsNotEqualTo(new Guid());
             command.CorrelationUniqueId.Requires(nameof(command.CorrelationUniqueId)).IsNotEqualTo(new Guid());

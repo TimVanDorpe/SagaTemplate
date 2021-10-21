@@ -46,17 +46,16 @@ namespace HC.<#= project #>.Processor.Saga
         {
             // Conditions
             context.Requires(nameof(context)).IsNotNull();
-            command.Requires(nameof(command)).IsNotNull();
-            command.UniqueId.Requires(nameof(command.UniqueId)).IsNotNull();
+            command.Requires(nameof(command)).IsNotNull();          
             command.UserUniqueId.Requires(nameof(command.UserUniqueId)).IsNotEqualTo(new Guid());
             command.TenantUniqueId.Requires(nameof(command.TenantUniqueId)).IsNotEqualTo(new Guid());
             command.CorrelationUniqueId.Requires(nameof(command.CorrelationUniqueId)).IsNotEqualTo(new Guid());
 
             // Init log
-            this.Log.SagaStart( command.UserUniqueId.ToUniqueId(), command.CorrelationUniqueId.ToUniqueId(), command);
+            _logger.SagaStart( command.UserUniqueId.ToUniqueId(), command.CorrelationUniqueId.ToUniqueId(), command);
 
             // Check if signature is valid
-            command.ValidateCommand(this.AppSettings.Security.Signature.Key, this.AppSettings.Security.Signature.Salt);
+            command.ValidateCommand(_appSettings.Security.Signature.Key, _appSettings.Security.Signature.Salt);
 
             // Update saga entity
             this.Data.State = <#= action #>SS.Start;
@@ -65,7 +64,7 @@ namespace HC.<#= project #>.Processor.Saga
             
 
             // Send <#= action #>CMD on the context 
-            await context.SendCommandAsync(command.MapToCommand() , this.AppSettings.Security.Signature.Key, this.AppSettings.Security.Signature.Salt);
+            await context.SendCommandAsync(command.MapToCommand() , _appSettings.Security.Signature.Key, _appSettings.Security.Signature.Salt);
 
             // Set as complete
             await Task.CompletedTask;
@@ -84,17 +83,23 @@ namespace HC.<#= project #>.Processor.Saga
             message.CorrelationUniqueId.Requires(nameof(message.CorrelationUniqueId)).IsNotEqualTo(new Guid());
 
             // Init log
-            this.Log.SagaStep(message.CorrelationUniqueId.ToUniqueId(), message);
+            _logger.SagaStep(message.CorrelationUniqueId.ToUniqueId(), message);
 
             // Check if signature is valid
-            message.ValidateReplyMessage(this.AppSettings.Security.Signature.Key, this.AppSettings.Security.Signature.Salt);
+            message.ValidateReplyMessage(_appSettings.Security.Signature.Key, _appSettings.Security.Signature.Salt);
 
             // Update saga entity
             this.Data.State = <#= action #>SS.Step<#= i #>Done;
-       
-            // Send command on the context
-            await context.SendCommandAsync(message.MapToCommand(), this.AppSettings.Security.Signature.Key, this.AppSettings.Security.Signature.Salt);
 
+       <# if (numberSteps == i)
+       {#>       
+           // Mark saga as completed
+           MarkAsComplete();
+           <#}else{#>
+            // Send command on the context
+            await context.SendCommandAsync(message.MapToCommand(), _appSettings.Security.Signature.Key, _appSettings.Security.Signature.Salt);
+           
+            <#}#>         
             // Set as complete
             await Task.CompletedTask;
         }     
@@ -187,7 +192,7 @@ namespace HC.<#= project #>.Processor
 {
     public static class <#= action #>Mapper
     {
-      public static <#= triggerCMD #> MapToCommand(this <#= action #>1CMD command)
+      public static <#= action #>1CMD MapToCommand(this <#= triggerCMD #> command)
         {
             return new <#= action #>1CMD(
                 tenantUniqueId: command.TenantUniqueId,
@@ -196,10 +201,10 @@ namespace HC.<#= project #>.Processor
             );
         }
 
- <# for (int i = 1; i < numberSteps + 1; i++)  { #> 
-        public static <#= action + i.ToString() #>CMD MapToCommand(this <#= action + i.ToString()#>RM message)
+ <# for (int i = 1; i < numberSteps; i++)  { #> 
+        public static <#= action + (i + 1).ToString() #>CMD MapToCommand(this <#= action + i.ToString()#>RM message)
         {
-            return new <#= action + i.ToString() #>CMD(
+            return new <#= action + (i + 1).ToString() #>CMD(
                 tenantUniqueId: message.TenantUniqueId,
                 correlationUniqueId: message.CorrelationUniqueId,
                 userUniqueId: message.UserUniqueId                
@@ -207,8 +212,8 @@ namespace HC.<#= project #>.Processor
         }
 <# } #>  
 
-<# for (int i = 1; i < numberSteps; i++)  { #>
-        public static <#= action + i.ToString() #>RM MapToReplyMessage(this <#= action + (i + 1).ToString() #>CMD command)
+<# for (int i = 1; i < numberSteps + 1; i++)  { #>
+        public static <#= action + i.ToString() #>RM MapToReplyMessage(this <#= action + i.ToString() #>CMD command)
         {
             return new <#= action + i.ToString() #>RM(
                tenantUniqueId: command.TenantUniqueId,
@@ -224,11 +229,11 @@ namespace HC.<#= project #>.Processor
   // End of file.
   SaveOutput(action + "Mapper.cs");
   #>    
-
- iocConfig.Builder.RegisterType(typeof(<#= action #>1CH));
- iocConfig.Builder.RegisterType(typeof(<#= action #>1CV));
-
-<# for (int i = 1; i < numberSteps; i++)  { #>
+<# for (int i = 1; i < numberSteps + 1; i++)  { #>
+ iocConfig.Builder.RegisterType(typeof(<#= action + i #>CH));
+ iocConfig.Builder.RegisterType(typeof(<#= action + i#>CV));
+<# } #>  
+<# for (int i = 1; i < numberSteps + 1; i++)  { #>
 typeof(NsbMessageProcessor<<#= action + i.ToString() #>CMD, <#= action + i.ToString() #>CV, <#= action + i.ToString() #>CH>),
 <# } #>  
 
@@ -236,6 +241,264 @@ typeof(NsbMessageProcessor<<#= action + i.ToString() #>CMD, <#= action + i.ToStr
   // End of file.
   SaveOutput(action + "ioc.cs");
   #>    
+  <# for (int i = 1; i < numberSteps + 1; i++)  { #>
+using HC.Common;
+using System;
+
+namespace HC.<#= project #>.Processor.Saga.Command
+{
+    [Serializable]
+    public class <#= action + i.ToString() #>CMD : HC.Command
+    {
+        public <#= action + i.ToString() #>CMD(
+            Guid tenantUniqueId,
+            Guid correlationUniqueId,
+            Guid userUniqueId                 
+            )
+            : base(tenantUniqueId, correlationUniqueId, userUniqueId)
+        {                    
+        }       
+    }
+}      
+<#  // End of file.
+  SaveOutput(action + i.ToString() + "CMD.cs");
+  #>     
+using System;
+using System.Threading.Tasks;
+using HC.<#= project #>.Processor.Saga.State;
+using HC.Common;
+using HC.Common.Processor.NSB;
+using NServiceBus;
+using HC.<#= project #>.Domain.Aggregate.<#= aggregate #>;
+using HC.<#= project #>.Infrastructure.DomainPersistence.Repository;
+using HC.Common.Processor.Logging;
+using HC.Common.Infrastructure.RedisCache;
+
+namespace HC.<#= project #>.Processor.Saga.Command
+{
+    public class <#= action + i.ToString() #>CH : NsbMessageHandler<<#= action + i.ToString() #>CMD, <#= aggregate #>AR>
+    {       
+        private readonly <#= aggregate #>Repository _repository;
+
+        public <#= action + i.ToString() #>CH(
+            <#= aggregate #>Repository repository,       
+            AppSettings appSettings, IProcessLogger logger, 
+            NServiceBusPublisher nsbPublisher, IRedisCacheManager cacheManager
+            )
+             : base(appSettings, logger, nsbPublisher, cacheManager,repository)
+        {
+            // Conditions
+            Condition.Requires(repository).IsNotNull();
+
+            //Init
+            _repository = repository;
+        }
+
+        public override async Task ExecuteAsync(<#= action + i.ToString() #>CMD command, IMessageHandlerContext context)
+        {
+            // Conditions
+            command.Requires(nameof(command)).IsNotNull();            
+            command.UserUniqueId.Requires(nameof(command.UserUniqueId)).IsNotEqualTo(new Guid());
+            command.TenantUniqueId.Requires(nameof(command.TenantUniqueId)).IsNotEqualTo(new Guid());
+            command.CorrelationUniqueId.Requires(nameof(command.CorrelationUniqueId)).IsNotEqualTo(new Guid());
+
+            // Log line
+            var sw = this.Log.MessageHandlerStart( command.UserUniqueId.ToUniqueId(), command.CorrelationUniqueId.ToUniqueId(), command);
+
+            // TODO : HANDLE IT 
+
+           // Reply back to the saga 
+           await context.SendReplyMessageAsync(command.MapToReplyMessage(), this.AppSettings.Security.Signature.Key, this.AppSettings.Security.Signature.Salt);           
+
+            // Log line
+            this.Log.MessageHandlerFinish(sw, command.CorrelationUniqueId.ToUniqueId(), command);
+        }
+
+        public override AsyncPollingInfo ConfigureAsyncPolling()
+        {
+            return AsyncPollingInfo.Create(
+                 step: <#= i.ToString() #>,
+                 total: <#= action #>State.Total,
+                 message: <#= action  #>State.Step<#= i.ToString() #>);
+        }
+    }
+}      
+<#  // End of file.
+  SaveOutput(action + i.ToString() + "CH.cs");
+  #>   
+using System.Threading.Tasks;
+using HC.Common;
+using HC.Common.Processor.Logging;
+using FluentValidation;
+using System;
+using HC.<#= project #>.Infrastructure.DomainPersistence.Repository;
+using FluentValidation.Results;
+using HC.Common.Processor.NSB;
+using HC.<#= project #>.Processor.Saga.State;
+
+namespace HC.<#= project #>.Processor.Saga.Command
+{
+    public class <#= action + i.ToString() #>CV : NsbMessageValidator<<#= action + i.ToString() #>CMD>
+    {
+        private readonly <#= aggregate #>Repository _repository;
+
+        public <#= action + i.ToString() #>CV(
+            IProcessLogger logger,
+            <#= aggregate #>Repository repository,
+             AppSettings appSettings
+            )
+            :base(logger , appSettings)
+        {
+            // Conditions
+            Condition.Requires(repository, nameof(repository)).IsNotNull();
+
+            // Init
+            _repository = repository;
+
+            // Validation rules     
+            RuleFor(x => x.TenantUniqueId)
+                .NotNull()
+                .NotEqual(new Guid());
+
+            RuleFor(x => x.UserUniqueId)
+                .NotNull()
+                .NotEqual(new Guid());
+
+            RuleFor(x => x.CorrelationUniqueId)
+               .NotNull()
+                .NotEqual(new Guid());
+        }
+
+        public override async Task<Result> ExecuteAsync(<#= action + i.ToString() #>CMD message)
+        {
+            // Conditions
+            Condition.Requires(message, nameof(message)).IsNotNull();
+
+            // Log line
+            var sw = this.Log.MessageValidatorStart( message.UserUniqueId.ToUniqueId(), message.CorrelationUniqueId.ToUniqueId(), message);
+
+            // init results
+            var result = new Result(await base.ValidateAsync(message), message.CorrelationUniqueId.ToUniqueId());
+
+            // If fluent validation properties are valid
+            if (result.IsValid)
+            {
+                // Log line
+                this.Log.Debug("Fluent validation results are valid",  message.CorrelationUniqueId.ToUniqueId());
+
+                 // Check if the unique id isn't in the persistence yet
+                if (await _repository.ExistsAsync(message.TenantUniqueId.ToTenantUniqueId(), UniqueId.Create(message.UniqueId)))
+                {
+                    // Log line
+                    Log.ValidationError("<#= aggregate #> already exist in the persistence.", message.CorrelationUniqueId.ToUniqueId());
+
+                    // Add property failure to result object
+                    result.AddPropertyFailure(new ValidationFailure("uniqueId", "<#= aggregate #> already exist in the persistence"));
+                }
+            }
+            else
+            {
+                // Log line
+                this.Log.ValidationError("Fluent validation results are invalid", message.CorrelationUniqueId.ToUniqueId(), result);
+            }
+
+            // Log line
+            this.Log.MessageValidatorFinish(sw, message.CorrelationUniqueId.ToUniqueId(), message);
+
+            // Return result
+            return result;
+        }
+
+         public override AsyncPollingInfo ConfigureAsyncPolling()
+        {
+            return AsyncPollingInfo.Create(
+                 step: <#= i.ToString() #>,
+                 total: <#= action #>State.Total,
+                 message: <#= action  #>State.Step<#= i.ToString() #>);
+        }
+    }
+}
+
+  <#  // End of file.
+  SaveOutput(action + i.ToString() + "CV.cs");
+  #> 
+<# } #>
+using HC.<#= project #>.Application.Command;
+using HC.<#= project #>.Domain.Aggregate.<#= aggregate #>;
+using HC.<#= project #>.Infrastructure.DomainPersistence.Repository;
+using HC.<#= project #>.Processor.Command;
+using HC.<#= project #>.Processor.Saga;
+using HC.<#= project #>.Processor.Saga.Command;
+using HC.<#= project #>.Processor.Saga.ReplyMessage;
+using HC.Common;
+using HC.Common.Infrastructure.DomainPersistence;
+using System;
+using System.Threading.Tasks;
+using Xunit;
+using Xunit.Abstractions;
+
+namespace HC.<#= project #>.Processor.UnitTests
+{
+    public class <#= action #>E2ETests : TestFixture<Startup>
+    {    
+        [Fact]
+        public void <#= action #>_ShouldComplete()
+        {
+            // Arrange
+            var appSettings = Scope.Resolve<AppSettings>();
+            var tenantUniqueId = Guid.Parse("");
+
+            var command = new <#= action #>CMD(
+               tenantUniqueId: tenantUniqueId,
+               correlationUniqueId: Guid.NewGuid(),
+               userUniqueId: Guid.NewGuid() 
+                );
+
+            command.__s = command.ToJsonString().ToHmac512Signature(
+                    key: appSettings.Security.Signature.Key,
+                    salt: appSettings.Security.Signature.Salt
+                    );
+
+            // Act and Assert
+            NServiceBus.Testing.Test.Saga<<#= action #>SAGA>()
+                .ExpectSend<<#= action #>CMD>()
+                .When(sagaIsInvoked: (saga, context) => saga.Handle(command, context))
+                .ExpectReply<<#= action #>1RM>()
+                .ExpectSend<<#= action #>2CMD>()               
+                .ExpectSagaCompleted()
+                ;
+        }
+
+        [Fact]
+        public async Task <#= action #>Handlers_ShouldReply()
+        {
+            // Arrange
+            var appSettings = Scope.Resolve<AppSettings>();
+            var repository = Scope.Resolve<<#= aggregate #>Repository>();          
+            var tenantUniqueId = TenantUniqueId.Create("");            
+            var correlationId = Guid.NewGuid();
+            var userId = Guid.NewGuid();
+
+         // Act & Assert
+<# for (int i = 1; i < numberSteps + 1; i++)  { #> 
+         // <#= action #><#= i #>CMD
+            NServiceBus.Testing.Test.Handler(Scope.Resolve<NsbMessageProcessor<<#= action #><#= i #>CMD, <#= action #><#= i #>CV, <#= action #><#= i #>CH>>())             
+                .OnMessage<<#= action #><#= i #>CMD>(m =>
+                {
+                    m.TenantUniqueId = tenantUniqueId.Value;
+                    m.CorrelationUniqueId = correlationId;
+                    m.UserUniqueId = userId;  
+                    m.__s = m.ToJsonString().ToHmac512Signature(key: appSettings.Security.Signature.Key, salt: appSettings.Security.Signature.Salt);
+                })
+               ;
+<# } #>  
+        }       
+    }
+}
+<#
+  // End of file.
+  SaveOutput(action + "E2ETests.cs");
+  #>  
 <#+
 private void SaveOutput(string outputFileName) {
   string templateDirectory = Path.GetDirectoryName(Host.TemplateFile);

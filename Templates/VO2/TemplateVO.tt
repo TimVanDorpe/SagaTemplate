@@ -4,17 +4,17 @@
 <#@ import namespace="System.IO" #>
 <#@ output extension=".cs" #>
 <#@ template hostSpecific="true"#>
-<# var datatype = new string [] {"bool", "PosVO"}; #>
-<# var properties = new string [] {"Noiseless","Pos"}; #>
-<# var project = "Isaac"; #>
-<# var aggregate = "AnnotatedWordString" ; #>
-<# var vo = "NarcisticCondition" ; #>
-<# var listName = "EnvironmentConditions"; #>
+<# var datatype = new string [] {"bool", "bool"}; #>
+<# var properties = new string [] {"ReceiveSuccesEmails","ReceiveFailureEmails"}; #>
+<# var project = "ImportExport"; #>
+<# var aggregate = "FileImportSettings" ; #>
+<# var vo = "NotificationSettings" ; #>
+<# var listName = "NotificationSettings"; #>
 using System;
 using HC.Common;
 using Newtonsoft.Json;
 
-namespace HC.Isaac.Domain.Aggregate.<#= aggregate #>
+namespace HC.<#= project #>.Domain.Aggregate.<#= aggregate #>
 {
     [Serializable]
     public class Deleted<#= vo #>DE : DomainEvent
@@ -36,7 +36,7 @@ using System;
 using HC.Common;
 using Newtonsoft.Json;
 
-namespace HC.Isaac.Domain.Aggregate.<#= aggregate #>
+namespace HC.<#= project #>.Domain.Aggregate.<#= aggregate #>
 {
 
     [Serializable]
@@ -128,10 +128,10 @@ using System.Collections.Generic;
 using System.Linq;
 using HC.Common;
 using HC.Integration.Domain.ValueObjects;
-using HC.Isaac.Domain.Aggregate.Shared;
+using HC.<#= project #>.Domain.Aggregate.Shared;
 using Newtonsoft.Json;
 
-namespace HC.Isaac.Domain.Aggregate.<#= vo #>
+namespace HC.<#= project #>.Domain.Aggregate.<#= vo #>
 {
     [Serializable]
     public class <#= vo #>VO : ComparableValueObject
