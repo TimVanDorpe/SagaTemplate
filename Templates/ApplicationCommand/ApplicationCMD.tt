@@ -4,12 +4,12 @@
 <#@ import namespace="System.IO" #>
 <#@ output extension=".cs" #>
 <#@ template hostSpecific="true"#>
-<# var project = "Core"; #>
-<# var action = "AddParticipantTransactionBatch" ; #>
-<# var controllerName = "ParticipantTransaction" ; #>
-<# var aggregate = "ParticipantTransaction" ; #>
-<# var datatype = new string [] {"AddParticipantTransactionBatchIM"}; #>
-<# var properties = new string [] { "AddParticipantTransactionBatch"}; #>
+<# var project = "Answer"; #>
+<# var action = "AnswerSurvey" ; #>
+<# var controllerName = "AnswerSurveyAS" ; #>
+<# var aggregate = "Answer" ; #>
+<# var datatype = new string [] {"AnswerSurveyIM"}; #>
+<# var properties = new string [] { "AnswerSurvey"}; #>
 using HC.Common;
 using System;
 
@@ -128,6 +128,76 @@ namespace HC.<#= project #>.Application.Command
 }
 <#  // End of file.
   SaveOutput(action + "CV.cs");
+#>using System.Threading.Tasks;
+using HC.Common;
+using HC.Common.Command;
+using HC.Common.Infrastructure.DomainPersistence;
+using HC.<#= project #>.Domain.Aggregate.Touchpoint;
+using HC.<#= project #>.Infrastructure.DomainPersistence.Repository;
+
+namespace HC.<#= project #>.Application.Command.Processors
+{
+    public class <#= action #>Processor : SelfHandelingCommandProcessor<<#= action #>CMD>
+    {
+        private readonly ITouchpointRepository _touchpointRepository;
+        private TouchpointAR _touchpoint;
+
+        public <#= action #>Processor(
+            ITouchpointRepository touchpointRepository,
+            ILogger logger, 
+            NServiceBusPublisher nsbPublisher, 
+            InMemoryDomainEventPublisher domainEventPublisher) 
+            : base(logger, nsbPublisher, domainEventPublisher)
+        {
+            _touchpointRepository = touchpointRepository;
+        }
+
+        protected override async Task<Result> HandleValidationAsync(<#= action #>CMD command, string ruleSet = null)
+        {
+            // Conditions
+            command.Requires(nameof(command)).IsNotNull();
+
+            Log.Debug("Validate command", command.CorrelationUniqueId.ToUniqueId(), command);
+
+            // validate result
+            var result = new Result(await Validator.ValidateAsync(command), command.CorrelationUniqueId.ToUniqueId());
+
+            // If fluent validation properties are valid
+            if (result.IsValid)
+            {
+                Log.Debug("Fluent validation results are valid", command.CorrelationUniqueId.ToUniqueId());
+
+                // Get touchpoint from persistence
+                var touchpoint = await _touchpointRepository.FindAsync(Loading.Full, command.TenantUniqueId.ToTenantUniqueId(), command.TouchpointUniqueId.ToUniqueId());
+
+                if (touchpoint == null)
+                   LogValidationError(result, command, nameof(command.TouchpointUniqueId), $"Can't find touchpoint with id {command.TouchpointUniqueId} in the persistence.");
+                                
+            }
+            else
+            {
+                Log.ValidationError("Fluent validation results are invalid", command.CorrelationUniqueId.ToUniqueId(), result);
+            }
+
+            Log.Debug("Validation is done", command.CorrelationUniqueId.ToUniqueId());
+
+            // Return result
+            return result;
+        }
+
+        protected override async Task HandleAsync(<#= action #>CMD command)
+        {
+            // Log line
+            Log.Debug("Handle command", command.CorrelationUniqueId.ToUniqueId(), command);
+
+            // TODO Handle
+
+            Log.Debug("Handling command is done", command.CorrelationUniqueId.ToUniqueId());
+        }
+    }
+}
+<#  // End of file.
+  SaveOutput(action + "Processor.cs");
 #>
 using System;
 using System.Collections.Generic;
@@ -374,9 +444,11 @@ namespace HC.<#= project #>.Application
     public class <#= controllerName #>AS
     {
         private readonly ICommandProcessor<<#= action #>CMD> _<#= ToLowerCase(action) #>Processor;       
+        private readonly <#= action #>Processor _<#= ToLowerCase(action) #>Processor;
 
         public <#= controllerName #>AS(
             ICommandProcessor<<#= action #>CMD> <#= ToLowerCase(action) #>Processor,
+            <#= action #>Processor <#= ToLowerCase(action) #>Processor
           )
         {
             _<#= ToLowerCase(action) #>Processor = <#= ToLowerCase(action) #>Processor;           

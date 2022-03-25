@@ -5,11 +5,11 @@
 <#@ output extension=".cs" #>
 <#@ template hostSpecific="true"#>
 <# var datatype = new string [] {"Guid"}; #>
-<# var properties = new string [] { "UniqueId" }; #>
-<# var project = "ImportExport"; #>
-<# var aggregate = "FileImportSettings" ; #>
-<# var action = "GetFileImportSettings" ; #>
-<# var model = "FileImportSettings" ; #>
+<# var properties = new string [] { "QuarantineGroupUniqueId" }; #>
+<# var project = "Core"; #>
+<# var aggregate = "QuarantineGroup" ; #>
+<# var action = "QuarantineGroupGetById" ; #>
+<# var model = "QuarantineGroup" ; #>
 using HC.Common.UnitTesting;
 using HC.<#= project #>.Infrastructure.DomainPersistence.Repository.<#= aggregate #>;
 using HC.<#= project #>.Test.Setup.Builders;

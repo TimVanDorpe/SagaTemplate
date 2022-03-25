@@ -29,6 +29,11 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>aggregate.tt</DependentUpon>
     </Compile>
+    <Compile Update="Templates\agg\agg.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>agg.tt</DependentUpon>
+    </Compile>
     <Compile Update="Templates\ApplicationCommand\ApplicationCMD.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
@@ -90,6 +95,10 @@
     <None Update="Templates\Aggregate\aggregate.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>aggregate.cs</LastGenOutput>
+    </None>
+    <None Update="Templates\agg\agg.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>agg.cs</LastGenOutput>
     </None>
     <None Update="Templates\ApplicationCommand\ApplicationCMD.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
