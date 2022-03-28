@@ -10,13 +10,13 @@ using HC.Integration.Events.Core;
 
 namespace HC.InsiderMetrics.Processor.Event
 {
-    public class SectorUpdatedEV : NsbMessageValidator<SectorUpdatedIE>
+    public class AnswerSurveyToV3EV : NsbMessageValidator<AnswerSurveyToV3IE>
     {
-        private readonly SectorRepository repository;
+        private readonly SurveyRepository repository;
 
-        public SectorUpdatedEV(
+        public AnswerSurveyToV3EV(
             IProcessLogger logger,
-            SectorRepository repository
+            SurveyRepository repository
         )
             : base(logger)
         {
@@ -43,7 +43,7 @@ namespace HC.InsiderMetrics.Processor.Event
                 .NotEqual(new Guid());            
         }
 
-        public override async Task<Result> ExecuteAsync(SectorUpdatedIE message)
+        public override async Task<Result> ExecuteAsync(AnswerSurveyToV3IE message)
         {
             // Conditions
             message.Requires(nameof(message)).IsNotNull();

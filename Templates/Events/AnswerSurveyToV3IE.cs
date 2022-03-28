@@ -3,12 +3,12 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace HC.Integration.Events.Isaac
+namespace HC.Integration.Events.LegacySync
 {
-   public class SectorUpdatedIE : Event
+   public class AnswerSurveyToV3IE : Event
     {
         [JsonConstructor]
-        public SectorUpdatedIE(
+        public AnswerSurveyToV3IE(
            Guid tenantUniqueId,
            Guid correlationUniqueId,
            Guid userUniqueId,

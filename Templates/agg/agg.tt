@@ -4,12 +4,12 @@
 <#@ import namespace="System.IO" #>
 <#@ output extension=".cs" #>
 <#@ template hostSpecific="true"#>
-<# var datatype = new string [] {"Guid" , "Guid"}; #>
-<# var properties = new string [] {"QuestionItemUniqueId", "QuestionItemUniqueIdV3"}; #>
+<# var datatype = new string [] {"Guid"}; #>
+<# var properties = new string [] {"TouchpointUniqueId"}; #>
 <# var project = "LegacySync"; #>
-<# var repository = "QuestionItemMapping"; #>
-<# var aggregate = "QuestionItemMapping" ; #>
-<# var classname = "QuestionItemMapping"; #>
+<# var repository = "Survey"; #>
+<# var aggregate = "Survey" ; #>
+<# var classname = "Survey"; #>
 <# var appCommands = true ; #>
 <# var numberOfSteps = 0; #>
 <# var version = true; #>

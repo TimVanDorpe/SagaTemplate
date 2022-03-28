@@ -4,12 +4,12 @@
 <#@ import namespace="System.IO" #>
 <#@ output extension=".cs" #>
 <#@ template hostSpecific="true"#>
-<# var projects = new string [] {"Swatson","InsiderMetrics" }; #>
+<# var projects = new string [] {"LegacySync","InsiderMetrics" }; #>
 <# var datatype = new string [] {"string","string" }; #>
 <# var prop = new string [] {"Name","Description"  }; #>
-<# var project = "Isaac"; #>
-<# var agg = "Sector"; #>
-<# var action = "SectorUpdated" ; #>
+<# var project = "LegacySync"; #>
+<# var agg = "Survey"; #>
+<# var action = "AnswerSurveyToV3" ; #>
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -100,7 +100,7 @@ namespace HC.<#= projects[i] #>.Processor.Event
 
 <#
   // End of file.
-  SaveOutput(action + i + "EH.cs");
+  SaveOutput(action + "EH.cs");
 #>
 using System;
 using System.Threading.Tasks;
@@ -199,7 +199,7 @@ namespace HC.<#= projects[i] #>.Processor.Event
 }
 <#
   // End of file.
-  SaveOutput(action + i + "EV.cs");
+  SaveOutput(action + "EV.cs");
 #>
 <# } #> 
 

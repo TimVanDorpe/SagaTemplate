@@ -10,14 +10,14 @@ using NServiceBus;
 namespace HC.InsiderMetrics.Processor.Event
 {
 
-    public class SectorUpdatedEH : NsbMessageHandler< SectorUpdatedIE, SectorAR>
+    public class AnswerSurveyToV3EH : NsbMessageHandler< AnswerSurveyToV3IE, SurveyAR>
     {
-        public SectorUpdatedEH(SectorRepository repository)
+        public AnswerSurveyToV3EH(SurveyRepository repository)
             : base(repository)
         {
 
         }
-        public override async Task ExecuteAsync(SectorUpdatedIE command, IMessageHandlerContext context)
+        public override async Task ExecuteAsync(AnswerSurveyToV3IE command, IMessageHandlerContext context)
         {
             // Conditions
             command.Requires(nameof(command)).IsNotNull();

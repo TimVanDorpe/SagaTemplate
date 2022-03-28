@@ -4,11 +4,11 @@
 <#@ import namespace="System.IO" #>
 <#@ output extension=".cs" #>
 <#@ template hostSpecific="true"#>
-<# var project = "ImportExport"; #>
-<# var action = "SaveFtpConnector" ; #>
-<# var triggerCMD = "SaveFtpConnectorCMD" ; #>
-<# var numberSteps = 3 ; #>
-<# var aggregate = "Tenant" ; #>
+<# var project = "Answer"; #>
+<# var action = "PredictAnswer" ; #>
+<# var triggerCMD = "PredictAnswerCMD" ; #>
+<# var numberSteps = 2 ; #>
+<# var aggregate = "Prediction" ; #>
 using System;
 using System.Threading.Tasks;
 using HC.<#= project #>.Application.Command;
